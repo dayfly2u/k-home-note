@@ -3,20 +3,28 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 체크마크 -->
+    <!-- 집 지붕 -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="8"
+        android:strokeWidth="6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M34,58 L48,72 L82,36" />
-    <!-- K 모노그램 (golf-round-tracker/yt-sub-digest와 동일 스타일) -->
+        android:pathData="M20,54 L54,22 L88,54" />
+    <!-- 집 몸체 -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="3"
+        android:strokeWidth="6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M30,80L30,92M30,86L40,80M30,86L40,92" />
+        android:pathData="M28,52 L28,90 L80,90 L80,52" />
+    <!-- K 모노그램 (golf-round-tracker/yt-sub-digest와 동일 스타일, 집 안에 크게) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M42,64 L42,84 M42,74 L58,64 M42,74 L58,84" />
 </vector>
