@@ -2,6 +2,7 @@ package com.khomenote
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,9 +18,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.khomenote.di.AppContainer
-import com.khomenote.notification.consumableItemIdFromIntent
+import com.khomenote.notification.consumeConsumableItemIdFromIntent
 import com.khomenote.ui.asset.AssetDetailScreen
 import com.khomenote.ui.asset.AssetDetailViewModel
 import com.khomenote.ui.asset.AssetDetailViewModelFactory
@@ -52,15 +55,19 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    val context = LocalContext.current
                     val notificationPermissionLauncher = rememberLauncherForActivityResult(
                         ActivityResultContracts.RequestPermission(),
                     ) { /* 거부해도 앱은 그대로 쓸 수 있다 — 이후 알림만 조용히 안 뜬다(NotificationHelper가 권한 체크 후 스킵) */ }
 
                     LaunchedEffect(Unit) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                            != PackageManager.PERMISSION_GRANTED
+                        ) {
                             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
-                        consumableItemIdFromIntent(intent)?.let { itemId ->
+                        consumeConsumableItemIdFromIntent(intent)?.let { itemId ->
                             backStack.add(Screen.ItemDetail(itemId))
                         }
                     }
@@ -74,7 +81,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        consumableItemIdFromIntent(intent)?.let { itemId ->
+        consumeConsumableItemIdFromIntent(intent)?.let { itemId ->
             backStack.add(Screen.ItemDetail(itemId))
         }
     }
@@ -132,7 +139,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     container.consumableItemRepository,
                     screen.assetId,
                 ),
-                key = "asset-detail-${System.identityHashCode(screen)}",
+                key = "asset-detail-${screen.assetId}",
             )
             AssetDetailScreen(
                 viewModel = vm,
@@ -159,7 +166,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     container.photoStorage,
                     screen.itemId,
                 ),
-                key = "item-detail-${System.identityHashCode(screen)}",
+                key = "item-detail-${screen.itemId}",
             )
             ItemDetailScreen(
                 viewModel = vm,

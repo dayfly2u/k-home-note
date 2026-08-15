@@ -54,3 +54,6 @@ fun showReminderNotification(context: Context, consumableItemId: Long, title: St
 
 fun consumableItemIdFromIntent(intent: Intent?): Long? =
     intent?.getLongExtra(EXTRA_CONSUMABLE_ITEM_ID, -1L)?.takeIf { it != -1L }
+
+fun consumeConsumableItemIdFromIntent(intent: Intent): Long? =
+    consumableItemIdFromIntent(intent)?.also { intent.removeExtra(EXTRA_CONSUMABLE_ITEM_ID) }
