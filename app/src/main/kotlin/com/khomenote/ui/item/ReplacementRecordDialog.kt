@@ -56,13 +56,13 @@ fun ReplacementRecordDialog(
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             scope.launch {
-                photoPath?.let { onDiscardPhoto(it) }
-                photoPath = null
                 val result = onPickPhoto(uri)
                 if (result != null) {
+                    photoPath?.let { onDiscardPhoto(it) }
                     photoPath = result
                     photoError = false
                 } else {
+                    // 새로 고른 사진 복사가 실패한 경우 — 기존에 붙어있던 사진은 그대로 둔다.
                     photoError = true
                 }
             }
