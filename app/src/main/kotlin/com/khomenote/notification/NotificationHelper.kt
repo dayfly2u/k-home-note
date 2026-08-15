@@ -25,11 +25,11 @@ fun createReminderChannel(context: Context) {
     manager.createNotificationChannel(channel)
 }
 
-fun showReminderNotification(context: Context, consumableItemId: Long, title: String, contentText: String) {
+fun showReminderNotification(context: Context, consumableItemId: Long, title: String, contentText: String): Boolean {
     if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
         != PackageManager.PERMISSION_GRANTED
     ) {
-        return
+        return false
     }
     val intent = Intent(context, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -50,6 +50,7 @@ fun showReminderNotification(context: Context, consumableItemId: Long, title: St
         .build()
     val manager = context.getSystemService(NotificationManager::class.java)
     manager.notify(consumableItemId.toInt(), notification)
+    return true
 }
 
 fun consumableItemIdFromIntent(intent: Intent?): Long? =

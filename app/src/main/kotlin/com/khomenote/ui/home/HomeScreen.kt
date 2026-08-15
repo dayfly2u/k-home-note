@@ -40,6 +40,7 @@ import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.photo.PhotoStorage
 import com.khomenote.ui.item.ReplacementRecordDialog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -96,7 +97,7 @@ class HomeViewModel(
     suspend fun pickPhoto(uri: Uri): String? = photoStorage.copyToInternalStorage(uri)
 
     fun discardPhoto(path: String) {
-        photoStorage.deletePhoto(path)
+        viewModelScope.launch(Dispatchers.IO) { photoStorage.deletePhoto(path) }
     }
 }
 

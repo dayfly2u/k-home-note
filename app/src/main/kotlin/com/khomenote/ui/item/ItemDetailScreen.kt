@@ -109,14 +109,14 @@ class ItemDetailViewModel(
     fun deleteRecord(record: ReplacementRecordEntity) {
         viewModelScope.launch {
             replacementRecordRepository.delete(record)
-            record.photoUri?.let { photoStorage.deletePhoto(it) }
+            record.photoUri?.let { path -> withContext(Dispatchers.IO) { photoStorage.deletePhoto(path) } }
         }
     }
 
     suspend fun pickPhoto(uri: Uri): String? = photoStorage.copyToInternalStorage(uri)
 
     fun discardPhoto(path: String) {
-        photoStorage.deletePhoto(path)
+        viewModelScope.launch(Dispatchers.IO) { photoStorage.deletePhoto(path) }
     }
 
     fun deleteItem(onDone: () -> Unit) {

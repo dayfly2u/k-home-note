@@ -56,6 +56,8 @@ fun ReplacementRecordDialog(
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             scope.launch {
+                photoPath?.let { onDiscardPhoto(it) }
+                photoPath = null
                 val result = onPickPhoto(uri)
                 if (result != null) {
                     photoPath = result
