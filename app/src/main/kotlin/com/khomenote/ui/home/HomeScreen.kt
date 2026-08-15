@@ -141,7 +141,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("정비 노트") },
+                title = { Text("K-Home-Note") },
                 actions = { TextButton(onClick = onManageAssets) { Text("자산 관리") } },
             )
         },
