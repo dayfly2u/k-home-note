@@ -24,6 +24,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.entity.AssetCategory
 import com.khomenote.data.local.entity.AssetEntity
+import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.AssetRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -121,12 +122,12 @@ fun AssetFormScreen(
                 FilterChip(
                     selected = viewModel.category == AssetCategory.HOME,
                     onClick = { viewModel.onCategoryChange(AssetCategory.HOME) },
-                    label = { Text("가전") },
+                    label = { Text(AssetCategory.HOME.label) },
                 )
                 FilterChip(
                     selected = viewModel.category == AssetCategory.CAR,
                     onClick = { viewModel.onCategoryChange(AssetCategory.CAR) },
-                    label = { Text("자동차") },
+                    label = { Text(AssetCategory.CAR.label) },
                 )
             }
             OutlinedTextField(

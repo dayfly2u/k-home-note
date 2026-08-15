@@ -29,8 +29,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.khomenote.data.local.entity.AssetCategory
 import com.khomenote.data.local.entity.AssetEntity
+import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.AssetRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -108,7 +108,7 @@ fun AssetListScreen(
                 ) {
                     Column {
                         Text(asset.name, fontWeight = FontWeight.Bold)
-                        Text(if (asset.category == AssetCategory.HOME) "가전" else "자동차")
+                        Text(asset.category.label)
                     }
                     TextButton(onClick = { pendingDelete = asset }) { Text("삭제") }
                 }

@@ -30,9 +30,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.khomenote.data.local.entity.AssetCategory
 import com.khomenote.data.local.entity.AssetEntity
 import com.khomenote.data.local.entity.ConsumableItemEntity
+import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -115,7 +115,7 @@ fun AssetDetailScreen(
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (asset != null) {
                 Text(
-                    if (asset.category == AssetCategory.HOME) "가전" else "자동차",
+                    asset.category.label,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

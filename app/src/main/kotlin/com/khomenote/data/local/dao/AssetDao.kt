@@ -19,7 +19,7 @@ interface AssetDao {
     @Delete
     suspend fun delete(asset: AssetEntity)
 
-    @Query("SELECT * FROM assets ORDER BY createdAt DESC")
+    @Query("SELECT * FROM assets ORDER BY createdAt DESC, id DESC")
     fun getAll(): Flow<List<AssetEntity>>
 
     @Query("SELECT * FROM assets WHERE id = :assetId")
