@@ -26,4 +26,5 @@ data class ConsumableItemEntity(
     val reminderLeadDays: Int = 7,
     val memo: String? = null,
     val createdAt: LocalDate = LocalDate.now(),
+    val lastNotifiedForDate: LocalDate? = null,
 )
