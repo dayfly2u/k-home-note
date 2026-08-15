@@ -6,7 +6,7 @@
 
 **Architecture:** Asset(자산) 1:N ConsumableItem(소모품) 1:N ReplacementRecord(교체이력) 3단 Room 데이터 모델. 다음 교체일 계산과 알림 대상 판정은 Android 의존성이 없는 순수 함수(`domain/`)로 분리해 TDD한다. 화면 전환은 golf-round-tracker와 동일하게 별도 Navigation 라이브러리 없이 `sealed interface Screen` + `mutableStateListOf` 수동 백스택으로 처리한다(자세한 이유는 "설계 노트" 참고). DI는 수동 `AppContainer` 싱글턴.
 
-**Tech Stack:** Kotlin, Jetpack Compose (Material3), Room+KSP, WorkManager, Coil3(로컬 사진 썸네일), JUnit4.
+**Tech Stack:** Kotlin, Jetpack Compose (Material3), Room+KSP, WorkManager, `BitmapFactory` 직접 디코드(로컬 사진 썸네일, 외부 이미지 로딩 라이브러리 없음), JUnit4.
 
 ## Global Constraints
 
@@ -24,7 +24,7 @@
 
 - **Navigation 라이브러리 대신 수동 백스택**: golf-round-tracker를 조사한 결과 `androidx.navigation:navigation-compose`를 쓰지 않고 `sealed interface Screen` + `mutableStateListOf<Screen>` + `when` 분기로 직접 화면을 전환하고 있었다(`MainActivity.kt`, `ui/navigation/Screen.kt`). 이 앱도 화면이 6개뿐이라 별도 라이브러리를 추가할 이유가 없어(YAGNI) 동일 패턴을 따른다 — 브레인스토밍 단계에서 계획된 `navigation-compose` 의존성은 이 이유로 빼고, 대신 golf-round-tracker와 동일한 수동 백스택 패턴을 쓴다.
 - **날짜 타입은 `LocalDate`**: golf-round-tracker는 날짜를 `Long`(epoch millis)으로 저장하지만, 이 앱은 "교체일 + N일" 같은 일(day) 단위 계산이 핵심이라 타임존/월 길이 문제 없이 정확한 `LocalDate.plusDays()`를 쓰는 게 맞다고 판단해 `LocalDate` + Room `TypeConverters`(epochDay Long 변환)를 쓰기로 결정했다. minSdk 26이라 `java.time` API가 desugaring 없이 그대로 동작한다.
-- **사진 썸네일에 Coil3 추가**: 설계 문서에 "영수증/제품 사진"이 이력 필수 항목으로 들어가 있는데, 저장만 하고 화면에서 전혀 볼 방법이 없으면 기능이 반쪽이 된다. `FileProvider` + 뷰어를 새로 만드는 대신, 로컬 파일을 바로 그려주는 `io.coil-kt.coil3:coil-compose:3.5.0` 하나만 추가해 상세 화면에 작은 썸네일로 보여준다(전체화면 뷰어는 만들지 않음 — YAGNI).
+- **사진 썸네일은 Coil 없이 `BitmapFactory`로 직접 디코드**: 설계 문서에 "영수증/제품 사진"이 이력 필수 항목으로 들어가 있는데, 저장만 하고 화면에서 전혀 볼 방법이 없으면 기능이 반쪽이 된다. 처음에는 `io.coil-kt.coil3:coil-compose:3.5.0`을 추가하려 했으나, Task 1 scaffolding 중 실제 빌드에서 이 버전이 `androidx.compose.runtime`을 Kotlin 2.4.0으로 컴파일된 상위 버전으로 강제 승격시켜 이 프로젝트의 Kotlin 2.2.10 컴파일러와 메타데이터 버전이 충돌해 빌드가 깨지는 걸 확인했다(golf-round-tracker는 Coil을 쓰지 않아 같은 버전 조합으로도 정상 빌드됨 — Coil 3.5.0이 원인). 이 앱은 원격 URL이 아니라 `filesDir/photos/`에 이미 저장된 로컬 파일 하나만 작은 썸네일로 보여주면 되므로, 비동기 이미지 로딩 라이브러리 자체가 과함(YAGNI). 대신 `LaunchedEffect`에서 `Dispatchers.IO`로 `BitmapFactory.decodeFile(path)`를 호출해 `ImageBitmap`으로 변환하고 `Image(bitmap = ...)`로 그리는 작은 컴포저블(`LocalPhotoThumbnail`)을 Task 8에서 직접 작성한다. 외부 의존성 추가 없음.
 - **연체 알림은 하루만 더 울림**: `ReminderTargetSelector`는 "D-reminderLeadDays 되는 날"과 "D-day 당일" 딱 두 시점에만 알림을 낸다. D-day를 지나 계속 연체 중인 항목을 매일 다시 알리지는 않는다(스팸 방지) — 대신 홈 대시보드에 연체 항목이 빨간색으로 계속 상단에 남아있어서 놓치지 않는다.
 
 ---
@@ -81,7 +81,6 @@ room = "2.7.0"
 coroutines = "1.10.2"
 lifecycleViewmodelCompose = "2.10.0"
 work = "2.11.2"
-coil = "3.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -102,7 +101,6 @@ kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
-coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -237,7 +235,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.coil.compose)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.junit)
 }
@@ -255,7 +252,7 @@ dependencies {
 
     <application
         android:name=".KHomeNoteApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
@@ -1949,7 +1946,9 @@ fun ReplacementRecordDialog(
 ```kotlin
 package com.khomenote.ui.item
 
+import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -1971,32 +1970,52 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import coil3.compose.AsyncImage
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.entity.ReplacementRecordEntity
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.photo.PhotoStorage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
+
+/**
+ * 로컬 파일 경로를 BitmapFactory로 직접 디코드해서 보여주는 작은 썸네일.
+ * 원격 URL을 다루지 않으므로 별도 이미지 로딩 라이브러리를 쓰지 않는다.
+ */
+@Composable
+fun LocalPhotoThumbnail(path: String, modifier: Modifier = Modifier) {
+    var bitmap by remember(path) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(path) {
+        bitmap = withContext(Dispatchers.IO) {
+            BitmapFactory.decodeFile(path)?.asImageBitmap()
+        }
+    }
+    bitmap?.let {
+        Image(bitmap = it, contentDescription = null, modifier = modifier)
+    }
+}
 
 data class ItemDetailUiState(
     val status: ConsumableItemWithStatus? = null,
@@ -2139,9 +2158,8 @@ fun ItemDetailScreen(
                 items(uiState.records, key = { it.id }) { record ->
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                         if (record.photoUri != null) {
-                            AsyncImage(
-                                model = File(record.photoUri),
-                                contentDescription = null,
+                            LocalPhotoThumbnail(
+                                path = record.photoUri,
                                 modifier = Modifier.size(48.dp),
                             )
                             Spacer(Modifier.width(8.dp))
