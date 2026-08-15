@@ -2699,13 +2699,16 @@ import com.khomenote.ui.navigation.Screen
 
 class MainActivity : ComponentActivity() {
 
+    // Activity 레벨 프로퍼티로 유지해야 onNewIntent(웜스타트)에서도 같은 backStack에 바로 push할 수 있다.
+    // setContent{} 블록 안의 remember{}로 선언하면 onNewIntent에서 접근할 방법이 없다.
+    private val backStack = mutableStateListOf<Screen>(Screen.Home)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val container = AppContainer.getInstance(applicationContext)
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val backStack = remember { mutableStateListOf<Screen>(Screen.Home) }
                     val notificationPermissionLauncher = rememberLauncherForActivityResult(
                         ActivityResultContracts.RequestPermission(),
                     ) { /* 거부해도 앱은 그대로 쓸 수 있다 — 이후 알림만 조용히 안 뜬다(NotificationHelper가 권한 체크 후 스킵) */ }
@@ -2725,9 +2728,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // launchMode="singleTask"라 앱이 이미 떠있는 상태에서 알림을 탭하면 onCreate가 아니라
+    // 여기가 불린다 — 콜드스타트와 마찬가지로 backStack에 직접 push해야 딥링크가 실제로 동작한다.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        consumableItemIdFromIntent(intent)?.let { itemId ->
+            backStack.add(Screen.ItemDetail(itemId))
+        }
     }
 }
 
@@ -2783,6 +2791,9 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     container.consumableItemRepository,
                     screen.assetId,
                 ),
+                // key 없이는 AssetDetail 화면 전체가 액티비티 범위의 단일 ViewModelStore를 공유해서,
+                // 다른 assetId로 다시 push해도 이전 자산의 VM 인스턴스가 재사용되어 오래된 데이터가 보인다.
+                key = "asset-detail-${System.identityHashCode(screen)}",
             )
             AssetDetailScreen(
                 viewModel = vm,
@@ -2809,6 +2820,9 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     container.photoStorage,
                     screen.itemId,
                 ),
+                // 알림 딥링크로 다른 itemId의 ItemDetail이 다시 push될 때 이전 항목의 VM이 재사용되지
+                // 않도록 key를 준다 (AssetDetail과 동일한 이유).
+                key = "item-detail-${System.identityHashCode(screen)}",
             )
             ItemDetailScreen(
                 viewModel = vm,
