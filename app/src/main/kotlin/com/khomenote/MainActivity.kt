@@ -15,7 +15,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,13 +42,16 @@ import com.khomenote.ui.navigation.Screen
 
 class MainActivity : ComponentActivity() {
 
+    // onNewIntent(싱글태스크 웜스타트 딥링크)에서도 접근할 수 있어야 하므로
+    // setContent{} 안의 remember{}가 아니라 Activity 클래스 프로퍼티로 둔다.
+    private val backStack = mutableStateListOf<Screen>(Screen.Home)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val container = AppContainer.getInstance(applicationContext)
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val backStack = remember { mutableStateListOf<Screen>(Screen.Home) }
                     val notificationPermissionLauncher = rememberLauncherForActivityResult(
                         ActivityResultContracts.RequestPermission(),
                     ) { /* 거부해도 앱은 그대로 쓸 수 있다 — 이후 알림만 조용히 안 뜬다(NotificationHelper가 권한 체크 후 스킵) */ }
@@ -72,6 +74,9 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        consumableItemIdFromIntent(intent)?.let { itemId ->
+            backStack.add(Screen.ItemDetail(itemId))
+        }
     }
 }
 
@@ -127,6 +132,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     container.consumableItemRepository,
                     screen.assetId,
                 ),
+                key = "asset-detail-${System.identityHashCode(screen)}",
             )
             AssetDetailScreen(
                 viewModel = vm,
@@ -153,6 +159,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     container.photoStorage,
                     screen.itemId,
                 ),
+                key = "item-detail-${System.identityHashCode(screen)}",
             )
             ItemDetailScreen(
                 viewModel = vm,
