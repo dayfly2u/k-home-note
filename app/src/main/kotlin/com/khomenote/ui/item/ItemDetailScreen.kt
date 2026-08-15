@@ -3,6 +3,7 @@ package com.khomenote.ui.item
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -74,6 +75,7 @@ fun LocalPhotoThumbnail(path: String, modifier: Modifier = Modifier) {
 data class ItemDetailUiState(
     val status: ConsumableItemWithStatus? = null,
     val records: List<ReplacementRecordEntity> = emptyList(),
+    val loaded: Boolean = false,
 )
 
 class ItemDetailViewModel(
@@ -86,7 +88,7 @@ class ItemDetailViewModel(
     val uiState: StateFlow<ItemDetailUiState> = combine(
         consumableItemRepository.getWithStatusById(itemId),
         replacementRecordRepository.getByItem(itemId),
-    ) { status, records -> ItemDetailUiState(status, records) }
+    ) { status, records -> ItemDetailUiState(status, records, loaded = true) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ItemDetailUiState())
 
     fun recordReplacement(date: LocalDate, price: Long?, vendor: String?, photoUri: String?, memo: String?) {
@@ -104,7 +106,18 @@ class ItemDetailViewModel(
         }
     }
 
-    suspend fun pickPhoto(uri: Uri): String = photoStorage.copyToInternalStorage(uri)
+    fun deleteRecord(record: ReplacementRecordEntity) {
+        viewModelScope.launch {
+            replacementRecordRepository.delete(record)
+            record.photoUri?.let { photoStorage.deletePhoto(it) }
+        }
+    }
+
+    suspend fun pickPhoto(uri: Uri): String? = photoStorage.copyToInternalStorage(uri)
+
+    fun discardPhoto(path: String) {
+        photoStorage.deletePhoto(path)
+    }
 
     fun deleteItem(onDone: () -> Unit) {
         val item = uiState.value.status?.item ?: return
@@ -137,6 +150,7 @@ fun ItemDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showRecordDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var recordPendingDelete by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
     val status = uiState.status
 
     if (showRecordDialog) {
@@ -147,6 +161,7 @@ fun ItemDetailScreen(
                 showRecordDialog = false
             },
             onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
         )
     }
 
@@ -165,6 +180,21 @@ fun ItemDetailScreen(
         )
     }
 
+    recordPendingDelete?.let { record ->
+        AlertDialog(
+            onDismissRequest = { recordPendingDelete = null },
+            title = { Text("이 기록을 삭제할까요?") },
+            text = { Text("삭제된 기록은 되돌릴 수 없습니다.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteRecord(record)
+                    recordPendingDelete = null
+                }) { Text("삭제") }
+            },
+            dismissButton = { TextButton(onClick = { recordPendingDelete = null }) { Text("취소") } },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -179,8 +209,16 @@ fun ItemDetailScreen(
             )
         },
     ) { padding ->
-        if (status == null) {
+        if (!uiState.loaded) {
             Text("불러오는 중...", modifier = Modifier.padding(padding).padding(16.dp))
+            return@Scaffold
+        }
+        if (status == null) {
+            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+                Text("삭제되었거나 존재하지 않는 항목입니다")
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = onBack) { Text("뒤로 가기") }
+            }
             return@Scaffold
         }
         val nextDueDate = DueDateCalculator.nextDueDate(
@@ -210,21 +248,27 @@ fun ItemDetailScreen(
             }
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(uiState.records, key = { it.id }) { record ->
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        if (record.photoUri != null) {
-                            LocalPhotoThumbnail(
-                                path = record.photoUri,
-                                modifier = Modifier.size(48.dp),
-                            )
-                            Spacer(Modifier.width(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(modifier = Modifier.weight(1f)) {
+                            if (record.photoUri != null) {
+                                LocalPhotoThumbnail(
+                                    path = record.photoUri,
+                                    modifier = Modifier.size(48.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Column {
+                                Text(record.date.toString(), fontWeight = FontWeight.Bold)
+                                val priceText = record.price?.let { "%,d원".format(it) }
+                                val infoLine = listOfNotNull(priceText, record.vendor).joinToString(" · ")
+                                if (infoLine.isNotBlank()) Text(infoLine, style = MaterialTheme.typography.bodySmall)
+                                if (!record.memo.isNullOrBlank()) Text(record.memo, style = MaterialTheme.typography.bodySmall)
+                            }
                         }
-                        Column {
-                            Text(record.date.toString(), fontWeight = FontWeight.Bold)
-                            val priceText = record.price?.let { "%,d원".format(it) }
-                            val infoLine = listOfNotNull(priceText, record.vendor).joinToString(" · ")
-                            if (infoLine.isNotBlank()) Text(infoLine, style = MaterialTheme.typography.bodySmall)
-                            if (!record.memo.isNullOrBlank()) Text(record.memo, style = MaterialTheme.typography.bodySmall)
-                        }
+                        TextButton(onClick = { recordPendingDelete = record }) { Text("삭제") }
                     }
                     HorizontalDivider()
                 }

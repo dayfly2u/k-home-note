@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.entity.AssetCategory
 import com.khomenote.data.local.entity.ReplacementRecordEntity
+import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
@@ -92,7 +93,11 @@ class HomeViewModel(
         }
     }
 
-    suspend fun pickPhoto(uri: Uri): String = photoStorage.copyToInternalStorage(uri)
+    suspend fun pickPhoto(uri: Uri): String? = photoStorage.copyToInternalStorage(uri)
+
+    fun discardPhoto(path: String) {
+        photoStorage.deletePhoto(path)
+    }
 }
 
 class HomeViewModelFactory(
@@ -128,6 +133,7 @@ fun HomeScreen(
                 recordDialogItemId = null
             },
             onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
         )
     }
 
@@ -148,12 +154,12 @@ fun HomeScreen(
                 FilterChip(
                     selected = categoryFilter == AssetCategory.HOME,
                     onClick = { categoryFilter = AssetCategory.HOME },
-                    label = { Text("가전") },
+                    label = { Text(AssetCategory.HOME.label) },
                 )
                 FilterChip(
                     selected = categoryFilter == AssetCategory.CAR,
                     onClick = { categoryFilter = AssetCategory.CAR },
-                    label = { Text("자동차") },
+                    label = { Text(AssetCategory.CAR.label) },
                 )
             }
             if (filteredItems.isEmpty()) {
