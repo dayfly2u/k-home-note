@@ -3,22 +3,22 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 집 지붕 -->
+    <!-- 집 지붕 (더 작게, K 모노그램과 안 겹치도록 가운데-아래쪽으로 배치) -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="6"
+        android:strokeWidth="5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M20,54 L54,22 L88,54" />
+        android:pathData="M46,66 L66,46 L86,66" />
     <!-- 집 몸체 -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="6"
+        android:strokeWidth="5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M28,52 L28,90 L80,90 L80,52" />
+        android:pathData="M52,64 L52,90 L80,90 L80,64" />
     <!-- K 모노그램 (golf-round-tracker와 위치/크기/색상 동일) -->
     <path
         android:fillColor="#00000000"
