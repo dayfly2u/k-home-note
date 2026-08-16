@@ -1,6 +1,7 @@
 package com.khomenote.ui.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -31,8 +33,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
-import com.khomenote.data.local.entity.AssetCategory
-import com.khomenote.data.local.entity.label
+import com.khomenote.data.local.entity.CategoryEntity
+import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.domain.DueDateCalculator
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,7 +51,11 @@ data class HomeItemUiModel(
 
 class HomeViewModel(
     private val consumableItemRepository: ConsumableItemRepository,
+    categoryRepository: CategoryRepository,
 ) : ViewModel() {
+
+    val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 정렬 기준이 nextDueDate 오름차순이라, 연체(과거 날짜) 항목이 자연히
     // 맨 앞에 온다 — 화면에서 별도로 "연체는 위로" 정렬 로직을 두지 않아도 된다.
@@ -73,10 +79,11 @@ class HomeViewModel(
 
 class HomeViewModelFactory(
     private val consumableItemRepository: ConsumableItemRepository,
+    private val categoryRepository: CategoryRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        HomeViewModel(consumableItemRepository) as T
+        HomeViewModel(consumableItemRepository, categoryRepository) as T
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,10 +94,11 @@ fun HomeScreen(
     onItemClick: (Long) -> Unit,
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
-    var categoryFilter by remember { mutableStateOf<AssetCategory?>(null) }
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    var categoryFilter by remember { mutableStateOf<Long?>(null) }
 
     val filteredItems = remember(items, categoryFilter) {
-        items.filter { categoryFilter == null || it.status.assetCategory == categoryFilter }
+        items.filter { categoryFilter == null || it.status.categoryId == categoryFilter }
     }
 
     Scaffold(
@@ -103,20 +111,18 @@ fun HomeScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(selected = categoryFilter == null, onClick = { categoryFilter = null }, label = { Text("전체") })
-                FilterChip(
-                    selected = categoryFilter == AssetCategory.HOME,
-                    onClick = { categoryFilter = AssetCategory.HOME },
-                    label = { Text(AssetCategory.HOME.label) },
-                )
-                FilterChip(
-                    selected = categoryFilter == AssetCategory.CAR,
-                    onClick = { categoryFilter = AssetCategory.CAR },
-                    label = { Text(AssetCategory.CAR.label) },
-                )
+                categories.forEach { category ->
+                    FilterChip(
+                        selected = categoryFilter == category.id,
+                        onClick = { categoryFilter = category.id },
+                        label = { Text("${category.emoji} ${category.name}") },
+                    )
+                }
             }
             if (filteredItems.isEmpty()) {
                 Text(

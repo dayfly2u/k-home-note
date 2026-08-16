@@ -32,6 +32,9 @@ import com.khomenote.ui.asset.AssetFormViewModelFactory
 import com.khomenote.ui.asset.AssetListScreen
 import com.khomenote.ui.asset.AssetListViewModel
 import com.khomenote.ui.asset.AssetListViewModelFactory
+import com.khomenote.ui.category.CategoryManagementScreen
+import com.khomenote.ui.category.CategoryManagementViewModel
+import com.khomenote.ui.category.CategoryManagementViewModelFactory
 import com.khomenote.ui.home.HomeScreen
 import com.khomenote.ui.home.HomeViewModel
 import com.khomenote.ui.home.HomeViewModelFactory
@@ -99,7 +102,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
     when (val screen = current) {
         is Screen.Home -> {
             val vm = viewModel<HomeViewModel>(
-                factory = HomeViewModelFactory(container.consumableItemRepository),
+                factory = HomeViewModelFactory(container.consumableItemRepository, container.categoryRepository),
             )
             HomeScreen(
                 viewModel = vm,
@@ -117,13 +120,21 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 onAddAsset = { push(Screen.AssetForm(null)) },
                 onAssetClick = { assetId -> push(Screen.AssetDetail(assetId)) },
                 onEditAsset = { assetId -> push(Screen.AssetForm(assetId)) },
+                onManageCategories = { push(Screen.CategoryManagement) },
                 onBack = { pop() },
             )
         }
 
+        is Screen.CategoryManagement -> {
+            val vm = viewModel<CategoryManagementViewModel>(
+                factory = CategoryManagementViewModelFactory(container.categoryRepository),
+            )
+            CategoryManagementScreen(viewModel = vm, onBack = { pop() })
+        }
+
         is Screen.AssetForm -> {
             val vm = viewModel<AssetFormViewModel>(
-                factory = AssetFormViewModelFactory(container.assetRepository, screen.assetId),
+                factory = AssetFormViewModelFactory(container.assetRepository, container.categoryRepository, screen.assetId),
                 key = "asset-form-${System.identityHashCode(screen)}",
             )
             AssetFormScreen(viewModel = vm, isNew = screen.assetId == null, onSaved = { pop() }, onBack = { pop() })

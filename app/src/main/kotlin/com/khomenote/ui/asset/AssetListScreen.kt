@@ -33,8 +33,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.khomenote.data.local.entity.AssetEntity
-import com.khomenote.data.local.entity.label
+import com.khomenote.data.local.dto.AssetWithCategory
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.ui.common.dragElevation
@@ -50,18 +49,18 @@ class AssetListViewModel(
     private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
 ) : ViewModel() {
-    val assets: StateFlow<List<AssetEntity>> = assetRepository.getAll()
+    val assets: StateFlow<List<AssetWithCategory>> = assetRepository.getAllWithCategory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun delete(asset: AssetEntity) {
-        viewModelScope.launch { assetRepository.delete(asset) }
+    fun delete(asset: AssetWithCategory) {
+        viewModelScope.launch { assetRepository.delete(asset.asset) }
     }
 
     suspend fun hasItems(assetId: Long): Boolean =
         consumableItemRepository.getByAsset(assetId).first().isNotEmpty()
 
-    fun reorder(orderedAssets: List<AssetEntity>) {
-        viewModelScope.launch { assetRepository.reorder(orderedAssets) }
+    fun reorder(orderedAssets: List<AssetWithCategory>) {
+        viewModelScope.launch { assetRepository.reorder(orderedAssets.map { it.asset }) }
     }
 }
 
@@ -81,11 +80,12 @@ fun AssetListScreen(
     onAddAsset: () -> Unit,
     onAssetClick: (Long) -> Unit,
     onEditAsset: (Long) -> Unit,
+    onManageCategories: () -> Unit,
     onBack: () -> Unit,
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
-    var pendingDelete by remember { mutableStateOf<AssetEntity?>(null) }
-    var blockedDelete by remember { mutableStateOf<AssetEntity?>(null) }
+    var pendingDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
+    var blockedDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
     val scope = rememberCoroutineScope()
 
     // 드래그 중에는 화면에 보이는 순서(displayAssets)를 직접 바꾸고, 드래그가
@@ -105,9 +105,9 @@ fun AssetListScreen(
         if (dragState.draggingItemIndex == null) displayAssets = assets
     }
 
-    fun requestDelete(asset: AssetEntity) {
+    fun requestDelete(asset: AssetWithCategory) {
         scope.launch {
-            if (viewModel.hasItems(asset.id)) {
+            if (viewModel.hasItems(asset.asset.id)) {
                 blockedDelete = asset
             } else {
                 pendingDelete = asset
@@ -119,7 +119,7 @@ fun AssetListScreen(
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("자산을 삭제할까요?") },
-            text = { Text("\"${asset.name}\"이 삭제되며 되돌릴 수 없습니다.") },
+            text = { Text("\"${asset.asset.name}\"이 삭제되며 되돌릴 수 없습니다.") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(asset)
@@ -134,7 +134,7 @@ fun AssetListScreen(
         AlertDialog(
             onDismissRequest = { blockedDelete = null },
             title = { Text("삭제할 수 없습니다") },
-            text = { Text("\"${asset.name}\"에 등록된 소모품이 있습니다. 먼저 소모품을 모두 삭제한 뒤 다시 시도해주세요.") },
+            text = { Text("\"${asset.asset.name}\"에 등록된 소모품이 있습니다. 먼저 소모품을 모두 삭제한 뒤 다시 시도해주세요.") },
             confirmButton = { TextButton(onClick = { blockedDelete = null }) { Text("확인") } },
         )
     }
@@ -144,6 +144,7 @@ fun AssetListScreen(
             TopAppBar(
                 title = { Text("자산 관리") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
+                actions = { TextButton(onClick = onManageCategories) { Text("카테고리 관리") } },
             )
         },
         floatingActionButton = {
@@ -171,11 +172,11 @@ fun AssetListScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
             LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
-                itemsIndexed(displayAssets, key = { _, asset -> asset.id }) { index, asset ->
+                itemsIndexed(displayAssets, key = { _, asset -> asset.asset.id }) { index, asset ->
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .dragElevation(index, dragState)
-                            .clickable { onAssetClick(asset.id) }
+                            .clickable { onAssetClick(asset.asset.id) }
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
@@ -187,11 +188,11 @@ fun AssetListScreen(
                                 color = MaterialTheme.colorScheme.outline,
                             )
                             Column {
-                                Text(asset.category.label)
-                                Text(asset.name, fontWeight = FontWeight.Bold)
-                                if (!asset.memo.isNullOrBlank()) {
+                                Text("${asset.categoryEmoji} ${asset.categoryName}")
+                                Text(asset.asset.name, fontWeight = FontWeight.Bold)
+                                if (!asset.asset.memo.isNullOrBlank()) {
                                     Text(
-                                        asset.memo,
+                                        asset.asset.memo,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.outline,
                                     )
@@ -199,7 +200,7 @@ fun AssetListScreen(
                             }
                         }
                         Row {
-                            TextButton(onClick = { onEditAsset(asset.id) }) { Text("수정") }
+                            TextButton(onClick = { onEditAsset(asset.asset.id) }) { Text("수정") }
                             TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
                         }
                     }

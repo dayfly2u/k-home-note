@@ -34,7 +34,7 @@ interface ConsumableItemDao {
         SELECT
             ci.*,
             a.name AS assetName,
-            a.category AS assetCategory,
+            a.categoryId AS categoryId,
             MAX(rr.date) AS latestRecordDate
         FROM consumable_items ci
         INNER JOIN assets a ON a.id = ci.assetId
@@ -50,7 +50,7 @@ interface ConsumableItemDao {
         SELECT
             ci.*,
             a.name AS assetName,
-            a.category AS assetCategory,
+            a.categoryId AS categoryId,
             MAX(rr.date) AS latestRecordDate
         FROM consumable_items ci
         INNER JOIN assets a ON a.id = ci.assetId
