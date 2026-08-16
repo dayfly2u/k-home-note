@@ -120,6 +120,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 viewModel = vm,
                 onAddAsset = { push(Screen.AssetForm(null)) },
                 onAssetClick = { assetId -> push(Screen.AssetDetail(assetId)) },
+                onEditAsset = { assetId -> push(Screen.AssetForm(assetId)) },
                 onBack = { pop() },
             )
         }
@@ -143,7 +144,6 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
             )
             AssetDetailScreen(
                 viewModel = vm,
-                onEditAsset = { push(Screen.AssetForm(screen.assetId)) },
                 onAddItem = { push(Screen.ItemForm(screen.assetId, null)) },
                 onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
                 onEditItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },

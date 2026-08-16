@@ -80,6 +80,7 @@ fun AssetListScreen(
     viewModel: AssetListViewModel,
     onAddAsset: () -> Unit,
     onAssetClick: (Long) -> Unit,
+    onEditAsset: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
@@ -184,7 +185,10 @@ fun AssetListScreen(
                             }
                         }
                     }
-                    TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
+                    Row {
+                        TextButton(onClick = { onEditAsset(asset.id) }) { Text("수정") }
+                        TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
+                    }
                 }
                 HorizontalDivider()
             }

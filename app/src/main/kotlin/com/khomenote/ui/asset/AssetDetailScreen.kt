@@ -85,7 +85,6 @@ class AssetDetailViewModelFactory(
 @Composable
 fun AssetDetailScreen(
     viewModel: AssetDetailViewModel,
-    onEditAsset: () -> Unit,
     onAddItem: () -> Unit,
     onItemClick: (Long) -> Unit,
     onEditItem: (Long) -> Unit,
@@ -129,7 +128,6 @@ fun AssetDetailScreen(
             TopAppBar(
                 title = { Text(asset?.name ?: "자산") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
-                actions = { TextButton(onClick = onEditAsset) { Text("수정") } },
             )
         },
         floatingActionButton = {
