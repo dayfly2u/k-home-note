@@ -91,16 +91,17 @@ class HomeViewModelFactory(
         HomeViewModel(consumableItemRepository, categoryRepository) as T
 }
 
-private data class DDayStyle(val text: String, val background: Color, val textColor: Color)
+private data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
 
 // 지난 날짜(연체)는 진한빨강 바탕에 흰 글자로 "D+N", 그 외는 남은 날짜에 따라
 // 10일 이하는 연한빨강, 31일 이하는 연한녹색, 그 외는 연한파랑 배지로 보여준다.
+// 급하지 않은 연한파랑 구간은 눈에 크게 띌 이유가 없어 폰트를 작게 둔다.
 private fun dDayStyle(daysUntilDue: Long): DDayStyle = when {
-    daysUntilDue < 0 -> DDayStyle("D+${-daysUntilDue}", Color(0xFFB71C1C), Color.White)
-    daysUntilDue == 0L -> DDayStyle("오늘", Color(0xFFFFCDD2), Color(0xFFC62828))
-    daysUntilDue <= 10 -> DDayStyle("D-$daysUntilDue", Color(0xFFFFCDD2), Color(0xFFC62828))
-    daysUntilDue <= 31 -> DDayStyle("D-$daysUntilDue", Color(0xFFC8E6C9), Color(0xFF2E7D32))
-    else -> DDayStyle("D-$daysUntilDue", Color(0xFFBBDEFB), Color(0xFF1565C0))
+    daysUntilDue < 0 -> DDayStyle("D+${-daysUntilDue}", Color(0xFFB71C1C), Color.White, large = true)
+    daysUntilDue == 0L -> DDayStyle("오늘", Color(0xFFFFCDD2), Color(0xFFC62828), large = true)
+    daysUntilDue <= 10 -> DDayStyle("D-$daysUntilDue", Color(0xFFFFCDD2), Color(0xFFC62828), large = true)
+    daysUntilDue <= 31 -> DDayStyle("D-$daysUntilDue", Color(0xFFC8E6C9), Color(0xFF2E7D32), large = true)
+    else -> DDayStyle("D-$daysUntilDue", Color(0xFFBBDEFB), Color(0xFF1565C0), large = false)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,17 +183,17 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Bold,
                             )
                         }
-                        val style = dDayStyle(uiModel.daysUntilDue)
+                        val dStyle = dDayStyle(uiModel.daysUntilDue)
                         Box(
                             modifier = Modifier
-                                .background(style.background, RoundedCornerShape(8.dp))
+                                .background(dStyle.background, RoundedCornerShape(8.dp))
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         ) {
                             Text(
-                                style.text,
-                                color = style.textColor,
+                                dStyle.text,
+                                color = dStyle.textColor,
                                 fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = if (dStyle.large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyMedium,
                             )
                         }
                     }
