@@ -54,7 +54,7 @@ import kotlinx.coroutines.launch
 // (대략 4줄/3줄이 보이는 정도), 더 있으면 그 영역 안에서만 슬라이드해서 본다.
 private val ITEM_ROW_HEIGHT = 72.dp
 private val REPAIR_ROW_HEIGHT = 96.dp
-private const val VISIBLE_ITEM_ROWS = 4
+private const val VISIBLE_ITEM_ROWS = 5
 private const val VISIBLE_REPAIR_ROWS = 3
 
 /**
@@ -344,16 +344,6 @@ fun AssetDetailScreen(
                         HorizontalDivider()
                     }
                 }
-            }
-
-            val memo = asset?.memo
-            if (!memo.isNullOrBlank()) {
-                HorizontalDivider()
-                Text(
-                    memo,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(16.dp),
-                )
             }
         }
     }
