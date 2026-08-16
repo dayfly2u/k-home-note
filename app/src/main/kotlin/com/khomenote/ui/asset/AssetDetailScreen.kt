@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -47,6 +49,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+// 소모품/정비이력 목록은 화면 높이를 서로 갉아먹지 않도록 각자 고정 높이로 두고
+// (대략 4줄/3줄이 보이는 정도), 더 있으면 그 영역 안에서만 슬라이드해서 본다.
+private val ITEM_ROW_HEIGHT = 72.dp
+private val REPAIR_ROW_HEIGHT = 96.dp
+private const val VISIBLE_ITEM_ROWS = 4
+private const val VISIBLE_REPAIR_ROWS = 3
 
 /**
  * monthlyDueDay가 있으면 "매달 N일"로, 없으면 cycleDays를 "1yr 3m" 형태로 보여준다.
@@ -217,7 +226,9 @@ fun AssetDetailScreen(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Column(
+            modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -245,7 +256,10 @@ fun AssetDetailScreen(
                     modifier = Modifier.padding(16.dp),
                 )
             } else {
-                LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.height(ITEM_ROW_HEIGHT * VISIBLE_ITEM_ROWS),
+                ) {
                     itemsIndexed(displayItems, key = { _, item -> item.id }) { index, item ->
                         Row(
                             modifier = Modifier.fillMaxWidth()
@@ -289,24 +303,26 @@ fun AssetDetailScreen(
                 }
             }
 
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+            HorizontalDivider()
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("정비 이력", fontWeight = FontWeight.Bold)
+                TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") }
+            }
+            if (uiState.repairRecords.isEmpty()) {
+                Text(
+                    "교체 주기와 무관하게 고친 내역은 \"정비 이력 추가\"로 남길 수 있어요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.height(REPAIR_ROW_HEIGHT * VISIBLE_REPAIR_ROWS),
                 ) {
-                    Text("정비 이력", fontWeight = FontWeight.Bold)
-                    TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") }
-                }
-                if (uiState.repairRecords.isEmpty()) {
-                    Text(
-                        "교체 주기와 무관하게 고친 내역은 \"정비 이력 추가\"로 남길 수 있어요.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                } else {
-                    uiState.repairRecords.forEach { record ->
+                    items(uiState.repairRecords, key = { it.id }) { record ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -328,16 +344,16 @@ fun AssetDetailScreen(
                         HorizontalDivider()
                     }
                 }
+            }
 
-                val memo = asset?.memo
-                if (!memo.isNullOrBlank()) {
-                    HorizontalDivider()
-                    Text(
-                        memo,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
+            val memo = asset?.memo
+            if (!memo.isNullOrBlank()) {
+                HorizontalDivider()
+                Text(
+                    memo,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(16.dp),
+                )
             }
         }
     }
