@@ -1,6 +1,5 @@
 package com.khomenote.ui.home
 
-import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,19 +32,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.entity.AssetCategory
-import com.khomenote.data.local.entity.ReplacementRecordEntity
 import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.ConsumableItemRepository
-import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
-import com.khomenote.photo.PhotoStorage
-import com.khomenote.ui.item.ReplacementRecordDialog
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 data class HomeItemUiModel(
@@ -56,8 +49,6 @@ data class HomeItemUiModel(
 
 class HomeViewModel(
     private val consumableItemRepository: ConsumableItemRepository,
-    private val replacementRecordRepository: ReplacementRecordRepository,
-    private val photoStorage: PhotoStorage,
 ) : ViewModel() {
 
     // 정렬 기준이 nextDueDate 오름차순이라, 연체(과거 날짜) 항목이 자연히
@@ -78,37 +69,14 @@ class HomeViewModel(
             }.sortedBy { it.nextDueDate }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun recordReplacement(itemId: Long, date: LocalDate, price: Long?, vendor: String?, photoUri: String?, memo: String?) {
-        viewModelScope.launch {
-            replacementRecordRepository.add(
-                ReplacementRecordEntity(
-                    consumableItemId = itemId,
-                    date = date,
-                    price = price,
-                    vendor = vendor,
-                    photoUri = photoUri,
-                    memo = memo,
-                )
-            )
-        }
-    }
-
-    suspend fun pickPhoto(uri: Uri): String? = photoStorage.copyToInternalStorage(uri)
-
-    fun discardPhoto(path: String) {
-        viewModelScope.launch(Dispatchers.IO) { photoStorage.deletePhoto(path) }
-    }
 }
 
 class HomeViewModelFactory(
     private val consumableItemRepository: ConsumableItemRepository,
-    private val replacementRecordRepository: ReplacementRecordRepository,
-    private val photoStorage: PhotoStorage,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        HomeViewModel(consumableItemRepository, replacementRecordRepository, photoStorage) as T
+        HomeViewModel(consumableItemRepository) as T
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,22 +88,9 @@ fun HomeScreen(
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
     var categoryFilter by remember { mutableStateOf<AssetCategory?>(null) }
-    var recordDialogItemId by remember { mutableStateOf<Long?>(null) }
 
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.status.assetCategory == categoryFilter }
-    }
-
-    recordDialogItemId?.let { itemId ->
-        ReplacementRecordDialog(
-            onDismiss = { recordDialogItemId = null },
-            onSave = { input ->
-                viewModel.recordReplacement(itemId, input.date, input.price, input.vendor, input.photoUri, input.memo)
-                recordDialogItemId = null
-            },
-            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
-            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
-        )
     }
 
     Scaffold(
@@ -172,29 +127,25 @@ fun HomeScreen(
             }
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredItems, key = { it.status.item.id }) { uiModel ->
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth()
                             .clickable { onItemClick(uiModel.status.item.id) }
                             .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "${uiModel.status.assetName} · ${uiModel.status.item.name}",
-                                fontWeight = FontWeight.Bold,
-                            )
-                            val dDayText = when {
-                                uiModel.daysUntilDue < 0 -> "${-uiModel.daysUntilDue}일 지남"
-                                uiModel.daysUntilDue == 0L -> "오늘"
-                                else -> "D-${uiModel.daysUntilDue}"
-                            }
-                            Text(
-                                dDayText,
-                                color = if (uiModel.daysUntilDue <= 0) Color.Red else MaterialTheme.colorScheme.outline,
-                                fontWeight = if (uiModel.daysUntilDue <= 0) FontWeight.Bold else FontWeight.Normal,
-                            )
+                        Text(
+                            "${uiModel.status.assetName} · ${uiModel.status.item.name}",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        val dDayText = when {
+                            uiModel.daysUntilDue < 0 -> "${-uiModel.daysUntilDue}일 지남"
+                            uiModel.daysUntilDue == 0L -> "오늘"
+                            else -> "D-${uiModel.daysUntilDue}"
                         }
-                        TextButton(onClick = { recordDialogItemId = uiModel.status.item.id }) { Text("구매이력 기록하기") }
+                        Text(
+                            dDayText,
+                            color = if (uiModel.daysUntilDue <= 0) Color.Red else MaterialTheme.colorScheme.outline,
+                            fontWeight = if (uiModel.daysUntilDue <= 0) FontWeight.Bold else FontWeight.Normal,
+                        )
                     }
                     HorizontalDivider()
                 }

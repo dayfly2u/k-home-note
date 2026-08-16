@@ -99,11 +99,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
     when (val screen = current) {
         is Screen.Home -> {
             val vm = viewModel<HomeViewModel>(
-                factory = HomeViewModelFactory(
-                    container.consumableItemRepository,
-                    container.replacementRecordRepository,
-                    container.photoStorage,
-                ),
+                factory = HomeViewModelFactory(container.consumableItemRepository),
             )
             HomeScreen(
                 viewModel = vm,
