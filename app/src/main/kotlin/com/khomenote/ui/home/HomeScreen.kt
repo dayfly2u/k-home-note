@@ -102,6 +102,7 @@ fun HomeScreen(
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.status.categoryId == categoryFilter }
     }
+    val categoryById = remember(categories) { categories.associateBy { it.id } }
 
     Scaffold(
         topBar = {
@@ -149,6 +150,14 @@ fun HomeScreen(
                             .clickable { onItemClick(uiModel.status.item.id) }
                             .padding(16.dp),
                     ) {
+                        val category = categoryById[uiModel.status.categoryId]
+                        if (category != null) {
+                            Text(
+                                "${category.emoji} ${category.name}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
                         Text(
                             "${uiModel.status.assetName} · ${uiModel.status.item.name}",
                             fontWeight = FontWeight.Bold,
