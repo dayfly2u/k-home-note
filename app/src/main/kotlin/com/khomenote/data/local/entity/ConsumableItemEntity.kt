@@ -23,6 +23,8 @@ data class ConsumableItemEntity(
     val assetId: Long,
     val name: String,
     val cycleDays: Int,
+    // null이면 cycleDays 기반 주기(간격), 값이 있으면 "매달 이 날짜" 고정 주기 — 두 방식은 배타적이다.
+    val monthlyDueDay: Int? = null,
     val reminderLeadDays: Int = 7,
     val memo: String? = null,
     val createdAt: LocalDate = LocalDate.now(),

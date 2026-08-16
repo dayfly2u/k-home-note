@@ -28,3 +28,13 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         )
     }
 }
+
+/**
+ * consumable_items에 monthlyDueDay 컬럼만 추가하는 순수 추가형(additive) 마이그레이션.
+ * "매달 특정 날짜" 고정 주기를 위한 컬럼 — null이면 기존 cycleDays 기반 간격 방식 그대로 동작한다.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `monthlyDueDay` INTEGER")
+    }
+}

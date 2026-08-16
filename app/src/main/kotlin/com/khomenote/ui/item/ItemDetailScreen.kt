@@ -199,12 +199,14 @@ fun ItemDetailScreen(
             itemCreatedAt = status.item.createdAt,
             cycleDays = status.item.cycleDays,
             latestRecordDate = status.latestRecordDate,
+            monthlyDueDay = status.item.monthlyDueDay,
         )
         val daysUntilDue = DueDateCalculator.daysUntilDue(nextDueDate, LocalDate.now())
 
         Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
             Text("${status.assetName} · ${status.item.name}", fontWeight = FontWeight.Bold)
-            Text("주기: ${status.item.cycleDays}일 / 알림: ${status.item.reminderLeadDays}일 전")
+            val cycleLabel = status.item.monthlyDueDay?.let { "매달 ${it}일" } ?: "${status.item.cycleDays}일"
+            Text("주기: $cycleLabel / 알림: ${status.item.reminderLeadDays}일 전")
             Text(
                 "다음 예정일: $nextDueDate" + if (daysUntilDue <= 0) " (이미 지남)" else " (D-$daysUntilDue)",
                 color = if (daysUntilDue <= 0) Color.Red else MaterialTheme.colorScheme.onSurface,

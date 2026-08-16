@@ -50,10 +50,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * cycleDays를 "1yr 3m" 형태로 보여준다. 12개월 = 1년 기준으로 환산하고(달력 계산과 맞춤),
- * 0인 단위는 생략한다. 예: 15개월(450일) -> "1yr 3m", 6개월(180일) -> "6m".
+ * monthlyDueDay가 있으면 "매달 N일"로, 없으면 cycleDays를 "1yr 3m" 형태로 보여준다.
+ * cycleDays는 12개월 = 1년 기준으로 환산하고(달력 계산과 맞춤), 0인 단위는 생략한다.
+ * 예: 15개월(450일) -> "1yr 3m", 6개월(180일) -> "6m".
  */
-private fun formatCycle(days: Int): String {
+private fun formatCycle(item: ConsumableItemEntity): String {
+    item.monthlyDueDay?.let { return "매달 ${it}일" }
+    val days = item.cycleDays
     val totalMonths = days / 30
     val remDays = days % 30
     val years = totalMonths / 12
@@ -260,7 +263,7 @@ fun AssetDetailScreen(
                                     Row {
                                         Text(item.name, fontWeight = FontWeight.Bold)
                                         Text(
-                                            " (${formatCycle(item.cycleDays)})",
+                                            " (${formatCycle(item)})",
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
                                         )

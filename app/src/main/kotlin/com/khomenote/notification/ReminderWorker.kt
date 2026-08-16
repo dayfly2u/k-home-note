@@ -33,6 +33,7 @@ class ReminderWorker(
                         itemCreatedAt = status.item.createdAt,
                         cycleDays = status.item.cycleDays,
                         latestRecordDate = status.latestRecordDate,
+                        monthlyDueDay = status.item.monthlyDueDay,
                     ),
                     reminderLeadDays = status.item.reminderLeadDays,
                     lastNotifiedForDate = status.item.lastNotifiedForDate,

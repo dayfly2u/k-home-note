@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,6 +35,11 @@ enum class CycleUnit(val days: Int, val label: String) {
     YEARS(365, "년"),
 }
 
+enum class CycleMode(val label: String) {
+    INTERVAL("기간"),
+    MONTHLY("매달 특정 날짜"),
+}
+
 class ItemFormViewModel(
     private val consumableItemRepository: ConsumableItemRepository,
     assetIdForNew: Long?,
@@ -41,9 +47,13 @@ class ItemFormViewModel(
 ) : ViewModel() {
     var name by mutableStateOf("")
         private set
+    var cycleMode by mutableStateOf(CycleMode.INTERVAL)
+        private set
     var cycleUnit by mutableStateOf(CycleUnit.MONTHS)
         private set
     var cycleValueText by mutableStateOf("6")
+        private set
+    var monthlyDueDayText by mutableStateOf("1")
         private set
     var reminderLeadDaysText by mutableStateOf("7")
         private set
@@ -60,13 +70,22 @@ class ItemFormViewModel(
     val cycleDays: Int
         get() = (cycleValueText.toIntOrNull() ?: 0) * cycleUnit.days
 
+    val monthlyDueDay: Int?
+        get() = monthlyDueDayText.toIntOrNull()?.coerceIn(1, 31)
+
     init {
         if (itemId != null) {
             viewModelScope.launch {
                 val item = consumableItemRepository.getById(itemId).first() ?: return@launch
                 name = item.name
-                cycleUnit = CycleUnit.DAYS
-                cycleValueText = item.cycleDays.toString()
+                if (item.monthlyDueDay != null) {
+                    cycleMode = CycleMode.MONTHLY
+                    monthlyDueDayText = item.monthlyDueDay.toString()
+                } else {
+                    cycleMode = CycleMode.INTERVAL
+                    cycleUnit = CycleUnit.DAYS
+                    cycleValueText = item.cycleDays.toString()
+                }
                 reminderLeadDaysText = item.reminderLeadDays.toString()
                 memo = item.memo ?: ""
                 loadedAssetId = item.assetId
@@ -77,12 +96,17 @@ class ItemFormViewModel(
     }
 
     fun onNameChange(value: String) { name = value }
+    fun onCycleModeChange(value: CycleMode) { cycleMode = value }
     fun onCycleUnitChange(value: CycleUnit) { cycleUnit = value }
     fun onCycleValueChange(value: String) { cycleValueText = value.filter(Char::isDigit) }
+    fun onMonthlyDueDayChange(value: String) { monthlyDueDayText = value.filter(Char::isDigit) }
     fun onReminderLeadDaysChange(value: String) { reminderLeadDaysText = value.filter(Char::isDigit) }
     fun onMemoChange(value: String) { memo = value }
 
-    fun canSave(): Boolean = name.isNotBlank() && cycleDays > 0 && loadedAssetId != null
+    fun canSave(): Boolean = name.isNotBlank() && loadedAssetId != null && when (cycleMode) {
+        CycleMode.INTERVAL -> cycleDays > 0
+        CycleMode.MONTHLY -> monthlyDueDay != null
+    }
 
     fun save(onDone: () -> Unit) {
         val assetId = loadedAssetId ?: return
@@ -95,7 +119,9 @@ class ItemFormViewModel(
                     id = itemId ?: 0,
                     assetId = assetId,
                     name = name,
-                    cycleDays = cycleDays,
+                    // 매달 고정 주기일 때는 cycleDays가 실제 계산에 쓰이지 않지만, NOT NULL 컬럼이라 30일로 채워둔다.
+                    cycleDays = if (cycleMode == CycleMode.INTERVAL) cycleDays else 30,
+                    monthlyDueDay = if (cycleMode == CycleMode.MONTHLY) monthlyDueDay else null,
                     reminderLeadDays = reminderLeadDaysText.toIntOrNull() ?: 7,
                     memo = memo.takeIf { it.isNotBlank() },
                     createdAt = loadedCreatedAt,
@@ -147,19 +173,43 @@ fun ItemFormScreen(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             )
             Text("교체 주기")
-            OutlinedTextField(
-                value = viewModel.cycleValueText,
-                onValueChange = viewModel::onCycleValueChange,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 12.dp)) {
-                CycleUnit.entries.forEach { unit ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                CycleMode.entries.forEach { mode ->
                     FilterChip(
-                        selected = viewModel.cycleUnit == unit,
-                        onClick = { viewModel.onCycleUnitChange(unit) },
-                        label = { Text(unit.label) },
+                        selected = viewModel.cycleMode == mode,
+                        onClick = { viewModel.onCycleModeChange(mode) },
+                        label = { Text(mode.label) },
                     )
                 }
+            }
+            if (viewModel.cycleMode == CycleMode.INTERVAL) {
+                OutlinedTextField(
+                    value = viewModel.cycleValueText,
+                    onValueChange = viewModel::onCycleValueChange,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 12.dp)) {
+                    CycleUnit.entries.forEach { unit ->
+                        FilterChip(
+                            selected = viewModel.cycleUnit == unit,
+                            onClick = { viewModel.onCycleUnitChange(unit) },
+                            label = { Text(unit.label) },
+                        )
+                    }
+                }
+            } else {
+                OutlinedTextField(
+                    value = viewModel.monthlyDueDayText,
+                    onValueChange = viewModel::onMonthlyDueDayChange,
+                    label = { Text("매달 며칠 (1~31)") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                )
+                Text(
+                    "말일이 없는 달(예: 2월 30일)은 그 달의 마지막 날로 자동 조정돼요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
             }
             OutlinedTextField(
                 value = viewModel.reminderLeadDaysText,
