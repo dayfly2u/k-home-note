@@ -112,12 +112,6 @@ fun AssetFormScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            OutlinedTextField(
-                value = viewModel.name,
-                onValueChange = viewModel::onNameChange,
-                label = { Text("이름 (예: 다이슨 V15, 아반떼 하이브리드)") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 12.dp)) {
                 FilterChip(
                     selected = viewModel.category == AssetCategory.HOME,
@@ -130,6 +124,12 @@ fun AssetFormScreen(
                     label = { Text(AssetCategory.CAR.label) },
                 )
             }
+            OutlinedTextField(
+                value = viewModel.name,
+                onValueChange = viewModel::onNameChange,
+                label = { Text("이름 (예: 다이슨 V15, 아반떼 하이브리드)") },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            )
             OutlinedTextField(
                 value = viewModel.memo,
                 onValueChange = viewModel::onMemoChange,

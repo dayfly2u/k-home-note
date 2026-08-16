@@ -124,23 +124,32 @@ fun AssetDetailScreen(
             if (uiState.items.isEmpty()) {
                 Text(
                     "등록된 소모품이 없습니다. \"소모품 추가\" 버튼을 눌러 추가하세요.",
+                    modifier = Modifier.padding(16.dp).weight(1f),
+                )
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(uiState.items, key = { it.id }) { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable { onItemClick(item.id) }
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(item.name, fontWeight = FontWeight.Bold)
+                            TextButton(onClick = { pendingDelete = item }) { Text("삭제") }
+                        }
+                        HorizontalDivider()
+                    }
+                }
+            }
+            val memo = asset?.memo
+            if (!memo.isNullOrBlank()) {
+                HorizontalDivider()
+                Text(
+                    memo,
+                    style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(16.dp),
                 )
-                return@Scaffold
-            }
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(uiState.items, key = { it.id }) { item ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .clickable { onItemClick(item.id) }
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(item.name, fontWeight = FontWeight.Bold)
-                        TextButton(onClick = { pendingDelete = item }) { Text("삭제") }
-                    }
-                    HorizontalDivider()
-                }
             }
         }
     }

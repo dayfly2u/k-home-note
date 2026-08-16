@@ -107,8 +107,8 @@ fun AssetListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column {
-                        Text(asset.name, fontWeight = FontWeight.Bold)
                         Text(asset.category.label)
+                        Text(asset.name, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = { pendingDelete = asset }) { Text("삭제") }
                 }
