@@ -1,6 +1,7 @@
 package com.khomenote.ui.asset
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -34,7 +37,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.dto.AssetWithCategory
+import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.AssetRepository
+import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
@@ -48,8 +53,12 @@ import kotlinx.coroutines.launch
 class AssetListViewModel(
     private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
+    categoryRepository: CategoryRepository,
 ) : ViewModel() {
     val assets: StateFlow<List<AssetWithCategory>> = assetRepository.getAllWithCategory()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun delete(asset: AssetWithCategory) {
@@ -67,10 +76,11 @@ class AssetListViewModel(
 class AssetListViewModelFactory(
     private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
+    private val categoryRepository: CategoryRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        AssetListViewModel(assetRepository, consumableItemRepository) as T
+        AssetListViewModel(assetRepository, consumableItemRepository, categoryRepository) as T
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,6 +93,8 @@ fun AssetListScreen(
     onBack: () -> Unit,
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    var categoryFilter by remember { mutableStateOf<Long?>(null) }
     var pendingDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
     var blockedDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
     val scope = rememberCoroutineScope()
@@ -90,13 +102,23 @@ fun AssetListScreen(
     // 드래그 중에는 화면에 보이는 순서(displayAssets)를 직접 바꾸고, 드래그가
     // 끝나야 DB에 저장한다. Flow(assets)가 새로 값을 흘려보내도 드래그 중에는
     // 그걸로 덮어쓰지 않아야 드래그 도중 화면이 튀지 않는다.
+    // displayAssets는 카테고리 필터와 무관하게 항상 전체 자산의 순서를 담는다 —
+    // 필터링된 화면에서 드래그해도 전체 정렬 순서(sortOrder)가 깨지지 않게 하기 위함.
     var displayAssets by remember { mutableStateOf(assets) }
+    val visibleAssets = remember(displayAssets, categoryFilter) {
+        displayAssets.filter { categoryFilter == null || it.asset.categoryId == categoryFilter }
+    }
     val listState = rememberLazyListState()
     val dragState = rememberDragDropListState(
         listState = listState,
-        itemCount = { displayAssets.size },
+        itemCount = { visibleAssets.size },
         onMove = { from, to ->
-            displayAssets = displayAssets.toMutableList().apply { add(to, removeAt(from)) }
+            // from/to는 필터링된 화면 안에서의 위치 — 전체 리스트 안에서 실제 위치를 찾아 옮긴다.
+            val actualFrom = displayAssets.indexOfFirst { it.asset.id == visibleAssets[from].asset.id }
+            val actualTo = displayAssets.indexOfFirst { it.asset.id == visibleAssets[to].asset.id }
+            if (actualFrom != -1 && actualTo != -1) {
+                displayAssets = displayAssets.toMutableList().apply { add(actualTo, removeAt(actualFrom)) }
+            }
         },
         onReorderFinished = { viewModel.reorder(displayAssets) },
     )
@@ -157,6 +179,20 @@ fun AssetListScreen(
             return@Scaffold
         }
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(selected = categoryFilter == null, onClick = { categoryFilter = null }, label = { Text("전체") })
+                categories.forEach { category ->
+                    FilterChip(
+                        selected = categoryFilter == category.id,
+                        onClick = { categoryFilter = category.id },
+                        label = { Text("${category.emoji} ${category.name}") },
+                    )
+                }
+            }
             Text(
                 "각 자산의 세부 소모품을 추가하려면 자산이름을 누르세요.",
                 style = MaterialTheme.typography.bodySmall,
@@ -169,8 +205,14 @@ fun AssetListScreen(
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
+            if (visibleAssets.isEmpty()) {
+                Text(
+                    "해당 카테고리에 등록된 자산이 없습니다.",
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
             LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
-                itemsIndexed(displayAssets, key = { _, asset -> asset.asset.id }) { index, asset ->
+                itemsIndexed(visibleAssets, key = { _, asset -> asset.asset.id }) { index, asset ->
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .dragElevation(index, dragState)

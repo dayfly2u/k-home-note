@@ -114,7 +114,11 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
 
         is Screen.AssetList -> {
             val vm = viewModel<AssetListViewModel>(
-                factory = AssetListViewModelFactory(container.assetRepository, container.consumableItemRepository),
+                factory = AssetListViewModelFactory(
+                    container.assetRepository,
+                    container.consumableItemRepository,
+                    container.categoryRepository,
+                ),
             )
             AssetListScreen(
                 viewModel = vm,
