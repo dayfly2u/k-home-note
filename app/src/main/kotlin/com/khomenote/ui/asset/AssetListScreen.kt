@@ -157,40 +157,48 @@ fun AssetListScreen(
             )
             return@Scaffold
         }
-        LazyColumn(state = listState, modifier = Modifier.padding(padding).fillMaxSize()) {
-            itemsIndexed(displayAssets, key = { _, asset -> asset.id }) { index, asset ->
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .dragElevation(index, dragState)
-                        .clickable { onAssetClick(asset.id) }
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row {
-                        Text(
-                            "≡",
-                            modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                        Column {
-                            Text(asset.category.label)
-                            Text(asset.name, fontWeight = FontWeight.Bold)
-                            if (!asset.memo.isNullOrBlank()) {
-                                Text(
-                                    asset.memo,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Text(
+                "손잡이(≡)를 1초간 꾹 눌렀다가 위아래로 드래그하면 순서를 바꿀 수 있어요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+            LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+                itemsIndexed(displayAssets, key = { _, asset -> asset.id }) { index, asset ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .dragElevation(index, dragState)
+                            .clickable { onAssetClick(asset.id) }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row {
+                            Text(
+                                "≡",
+                                modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                            Column {
+                                Text(asset.category.label)
+                                Text(asset.name, fontWeight = FontWeight.Bold)
+                                if (!asset.memo.isNullOrBlank()) {
+                                    Text(
+                                        asset.memo,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
                             }
                         }
+                        Row {
+                            TextButton(onClick = { onEditAsset(asset.id) }) { Text("수정") }
+                            TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
+                        }
                     }
-                    Row {
-                        TextButton(onClick = { onEditAsset(asset.id) }) { Text("수정") }
-                        TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
-                    }
+                    HorizontalDivider()
                 }
-                HorizontalDivider()
             }
         }
     }
