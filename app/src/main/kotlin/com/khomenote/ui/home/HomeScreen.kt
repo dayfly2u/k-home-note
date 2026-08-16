@@ -1,8 +1,10 @@
 package com.khomenote.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -24,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +91,18 @@ class HomeViewModelFactory(
         HomeViewModel(consumableItemRepository, categoryRepository) as T
 }
 
+private data class DDayStyle(val text: String, val background: Color, val textColor: Color)
+
+// 지난 날짜(연체)는 진한빨강 바탕에 흰 글자로 "D+N", 그 외는 남은 날짜에 따라
+// 10일 이하는 연한빨강, 31일 이하는 연한녹색, 그 외는 연한파랑 배지로 보여준다.
+private fun dDayStyle(daysUntilDue: Long): DDayStyle = when {
+    daysUntilDue < 0 -> DDayStyle("D+${-daysUntilDue}", Color(0xFFB71C1C), Color.White)
+    daysUntilDue == 0L -> DDayStyle("오늘", Color(0xFFFFCDD2), Color(0xFFC62828))
+    daysUntilDue <= 10 -> DDayStyle("D-$daysUntilDue", Color(0xFFFFCDD2), Color(0xFFC62828))
+    daysUntilDue <= 31 -> DDayStyle("D-$daysUntilDue", Color(0xFFC8E6C9), Color(0xFF2E7D32))
+    else -> DDayStyle("D-$daysUntilDue", Color(0xFFBBDEFB), Color(0xFF1565C0))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -145,33 +161,40 @@ fun HomeScreen(
             )
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredItems, key = { it.status.item.id }) { uiModel ->
-                    Column(
+                    Row(
                         modifier = Modifier.fillMaxWidth()
                             .clickable { onItemClick(uiModel.status.item.id) }
                             .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val category = categoryById[uiModel.status.categoryId]
-                        if (category != null) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            val category = categoryById[uiModel.status.categoryId]
+                            if (category != null) {
+                                Text(
+                                    "${category.emoji} ${category.name}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
                             Text(
-                                "${category.emoji} ${category.name}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
+                                "${uiModel.status.assetName} · ${uiModel.status.item.name}",
+                                fontWeight = FontWeight.Bold,
                             )
                         }
-                        Text(
-                            "${uiModel.status.assetName} · ${uiModel.status.item.name}",
-                            fontWeight = FontWeight.Bold,
-                        )
-                        val dDayText = when {
-                            uiModel.daysUntilDue < 0 -> "${-uiModel.daysUntilDue}일 지남"
-                            uiModel.daysUntilDue == 0L -> "오늘"
-                            else -> "D-${uiModel.daysUntilDue}"
+                        val style = dDayStyle(uiModel.daysUntilDue)
+                        Box(
+                            modifier = Modifier
+                                .background(style.background, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Text(
+                                style.text,
+                                color = style.textColor,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.headlineSmall,
+                            )
                         }
-                        Text(
-                            dDayText,
-                            color = if (uiModel.daysUntilDue <= 0) Color.Red else MaterialTheme.colorScheme.outline,
-                            fontWeight = if (uiModel.daysUntilDue <= 0) FontWeight.Bold else FontWeight.Normal,
-                        )
                     }
                     HorizontalDivider()
                 }
