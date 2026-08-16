@@ -278,8 +278,8 @@ private fun CategoryEmojiGrid(selected: String, onSelected: (String) -> Unit) {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .padding(4.dp)
-                            .size(52.dp)
+                            .padding(2.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
                             .background(
                                 if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
@@ -293,7 +293,7 @@ private fun CategoryEmojiGrid(selected: String, onSelected: (String) -> Unit) {
                             )
                             .clickable { onSelected(candidate) },
                     ) {
-                        Text(candidate, style = MaterialTheme.typography.headlineMedium)
+                        Text(candidate, style = MaterialTheme.typography.headlineSmall)
                     }
                 }
             }
