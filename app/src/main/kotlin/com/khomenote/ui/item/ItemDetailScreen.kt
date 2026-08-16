@@ -3,6 +3,7 @@ package com.khomenote.ui.item
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.entity.ReplacementRecordEntity
+import com.khomenote.ui.asset.SECTION_TITLE_COLOR
+import com.khomenote.ui.asset.SECTION_TITLE_TEXT_COLOR
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
@@ -238,7 +241,13 @@ fun ItemDetailScreen(
                 Text(status.item.memo, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(Modifier.height(16.dp))
-            Text("교체/구매 이력", fontWeight = FontWeight.Bold)
+            Text(
+                "교체/구매 이력",
+                fontWeight = FontWeight.Bold,
+                color = SECTION_TITLE_TEXT_COLOR,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth().background(SECTION_TITLE_COLOR).padding(horizontal = 8.dp, vertical = 2.dp),
+            )
             if (uiState.records.isEmpty()) {
                 Text("아직 기록된 이력이 없습니다.", style = MaterialTheme.typography.bodySmall)
             }

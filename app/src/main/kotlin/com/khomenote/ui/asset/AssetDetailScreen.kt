@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
@@ -59,11 +60,9 @@ private val REPAIR_ROW_HEIGHT = 96.dp
 private const val VISIBLE_ITEM_ROWS = 5
 private const val VISIBLE_REPAIR_ROWS = 3
 
-// 소모품 목록은 연한빨강, 정비이력 목록은 연한녹색 타이틀 바로 한눈에 구분되게 한다.
-private val SECTION_ITEM_COLOR = Color(0xFFFFCDD2)
-private val SECTION_ITEM_TEXT_COLOR = Color(0xFFC62828)
-private val SECTION_REPAIR_COLOR = Color(0xFFC8E6C9)
-private val SECTION_REPAIR_TEXT_COLOR = Color(0xFF2E7D32)
+// 소모품/정비이력 둘 다 같은 연한녹색 타이틀 바로 구간을 표시한다(구매/교체 이력 화면과도 통일).
+val SECTION_TITLE_COLOR = Color(0xFFC8E6C9)
+val SECTION_TITLE_TEXT_COLOR = Color(0xFF2E7D32)
 
 /**
  * monthlyDueDay가 있으면 "매달 N일"로, 없으면 cycleDays를 "1yr 3m" 형태로 보여준다.
@@ -239,12 +238,20 @@ fun AssetDetailScreen(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth()
-                    .background(SECTION_ITEM_COLOR)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .background(SECTION_TITLE_COLOR)
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("소모품", fontWeight = FontWeight.Bold, color = SECTION_ITEM_TEXT_COLOR)
-                TextButton(onClick = onAddItem) { Text("소모품 추가") }
+                Text(
+                    "소모품",
+                    fontWeight = FontWeight.Bold,
+                    color = SECTION_TITLE_TEXT_COLOR,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                TextButton(
+                    onClick = onAddItem,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) { Text("소모품 추가", style = MaterialTheme.typography.bodySmall) }
             }
             if (displayItems.isEmpty()) {
                 Text(
@@ -301,12 +308,20 @@ fun AssetDetailScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth()
-                    .background(SECTION_REPAIR_COLOR)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .background(SECTION_TITLE_COLOR)
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("정비 이력", fontWeight = FontWeight.Bold, color = SECTION_REPAIR_TEXT_COLOR)
-                TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") }
+                Text(
+                    "정비 이력",
+                    fontWeight = FontWeight.Bold,
+                    color = SECTION_TITLE_TEXT_COLOR,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                TextButton(
+                    onClick = { showRepairDialog = true },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) { Text("정비 이력 추가", style = MaterialTheme.typography.bodySmall) }
             }
             if (uiState.repairRecords.isEmpty()) {
                 Text(
