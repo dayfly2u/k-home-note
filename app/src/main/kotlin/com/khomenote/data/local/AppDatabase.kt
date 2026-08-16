@@ -14,7 +14,7 @@ import com.khomenote.data.local.entity.ReplacementRecordEntity
 
 @Database(
     entities = [AssetEntity::class, ConsumableItemEntity::class, ReplacementRecordEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
