@@ -34,7 +34,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.entity.AssetEntity
 import com.khomenote.data.local.entity.ConsumableItemEntity
-import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.ui.common.dragElevation
@@ -45,6 +44,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/**
+ * cycleDays를 "1yr 3m" 형태로 보여준다. 12개월 = 1년 기준으로 환산하고(달력 계산과 맞춤),
+ * 0인 단위는 생략한다. 예: 15개월(450일) -> "1yr 3m", 6개월(180일) -> "6m".
+ */
+private fun formatCycle(days: Int): String {
+    val totalMonths = days / 30
+    val remDays = days % 30
+    val years = totalMonths / 12
+    val months = totalMonths % 12
+    val parts = buildList {
+        if (years > 0) add("${years}yr")
+        if (months > 0) add("${months}m")
+        if (remDays > 0) add("${remDays}d")
+    }
+    return if (parts.isEmpty()) "0d" else parts.joinToString(" ")
+}
 
 data class AssetDetailUiState(
     val asset: AssetEntity? = null,
@@ -135,12 +151,12 @@ fun AssetDetailScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            if (asset != null) {
+            if (displayItems.isNotEmpty()) {
                 Text(
-                    asset.category.label,
+                    "손잡이(≡)를 1초간 꾹 눌렀다가 위아래로 드래그하면 순서를 바꿀 수 있어요.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
             if (displayItems.isEmpty()) {
@@ -166,7 +182,14 @@ fun AssetDetailScreen(
                                     color = MaterialTheme.colorScheme.outline,
                                 )
                                 Column {
-                                    Text(item.name, fontWeight = FontWeight.Bold)
+                                    Row {
+                                        Text(item.name, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            " (${formatCycle(item.cycleDays)})",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
                                     if (!item.memo.isNullOrBlank()) {
                                         Text(
                                             item.memo,
