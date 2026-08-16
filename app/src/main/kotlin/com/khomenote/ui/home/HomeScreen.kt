@@ -125,6 +125,12 @@ fun HomeScreen(
                 )
                 return@Scaffold
             }
+            Text(
+                "교체주기순으로 정렬되어있습니다. 구매이력을 기록하려면 소모품이름을 누르세요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredItems, key = { it.status.item.id }) { uiModel ->
                     Column(
