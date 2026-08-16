@@ -135,7 +135,16 @@ fun AssetDetailScreen(
                                 .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text(item.name, fontWeight = FontWeight.Bold)
+                            Column {
+                                Text(item.name, fontWeight = FontWeight.Bold)
+                                if (!item.memo.isNullOrBlank()) {
+                                    Text(
+                                        item.memo,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
+                            }
                             TextButton(onClick = { pendingDelete = item }) { Text("삭제") }
                         }
                         HorizontalDivider()
