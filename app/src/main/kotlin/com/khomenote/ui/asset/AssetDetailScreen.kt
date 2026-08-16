@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -34,8 +36,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.entity.AssetEntity
 import com.khomenote.data.local.entity.ConsumableItemEntity
+import com.khomenote.data.local.entity.RepairRecordEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.ConsumableItemRepository
+import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
@@ -65,17 +69,20 @@ private fun formatCycle(days: Int): String {
 data class AssetDetailUiState(
     val asset: AssetEntity? = null,
     val items: List<ConsumableItemEntity> = emptyList(),
+    val repairRecords: List<RepairRecordEntity> = emptyList(),
 )
 
 class AssetDetailViewModel(
     assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
-    assetId: Long,
+    private val repairRecordRepository: RepairRecordRepository,
+    private val assetId: Long,
 ) : ViewModel() {
     val uiState: StateFlow<AssetDetailUiState> = combine(
         assetRepository.getById(assetId),
         consumableItemRepository.getByAsset(assetId),
-    ) { asset, items -> AssetDetailUiState(asset, items) }
+        repairRecordRepository.getByAsset(assetId),
+    ) { asset, items, repairRecords -> AssetDetailUiState(asset, items, repairRecords) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AssetDetailUiState())
 
     fun deleteItem(item: ConsumableItemEntity) {
@@ -85,16 +92,36 @@ class AssetDetailViewModel(
     fun reorderItems(orderedItems: List<ConsumableItemEntity>) {
         viewModelScope.launch { consumableItemRepository.reorder(orderedItems) }
     }
+
+    fun saveRepairRecord(existing: RepairRecordEntity?, input: RepairRecordInput) {
+        viewModelScope.launch {
+            repairRecordRepository.save(
+                RepairRecordEntity(
+                    id = existing?.id ?: 0,
+                    assetId = assetId,
+                    name = input.name,
+                    date = input.date,
+                    price = input.price,
+                    memo = input.memo,
+                )
+            )
+        }
+    }
+
+    fun deleteRepairRecord(record: RepairRecordEntity) {
+        viewModelScope.launch { repairRecordRepository.delete(record) }
+    }
 }
 
 class AssetDetailViewModelFactory(
     private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
+    private val repairRecordRepository: RepairRecordRepository,
     private val assetId: Long,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        AssetDetailViewModel(assetRepository, consumableItemRepository, assetId) as T
+        AssetDetailViewModel(assetRepository, consumableItemRepository, repairRecordRepository, assetId) as T
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,6 +151,10 @@ fun AssetDetailScreen(
         if (dragState.draggingItemIndex == null) displayItems = uiState.items
     }
 
+    var showRepairDialog by remember { mutableStateOf(false) }
+    var editingRepairRecord by remember { mutableStateOf<RepairRecordEntity?>(null) }
+    var pendingDeleteRepair by remember { mutableStateOf<RepairRecordEntity?>(null) }
+
     pendingDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
@@ -139,11 +170,49 @@ fun AssetDetailScreen(
         )
     }
 
+    if (showRepairDialog) {
+        RepairRecordDialog(
+            initial = null,
+            onDismiss = { showRepairDialog = false },
+            onSave = { input ->
+                viewModel.saveRepairRecord(null, input)
+                showRepairDialog = false
+            },
+        )
+    }
+
+    editingRepairRecord?.let { target ->
+        RepairRecordDialog(
+            initial = target,
+            onDismiss = { editingRepairRecord = null },
+            onSave = { input ->
+                viewModel.saveRepairRecord(target, input)
+                editingRepairRecord = null
+            },
+        )
+    }
+
+    pendingDeleteRepair?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteRepair = null },
+            title = { Text("이 정비 이력을 삭제할까요?") },
+            text = { Text("삭제된 기록은 되돌릴 수 없습니다.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteRepairRecord(target)
+                    pendingDeleteRepair = null
+                }) { Text("삭제") }
+            },
+            dismissButton = { TextButton(onClick = { pendingDeleteRepair = null }) { Text("취소") } },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(asset?.name ?: "자산") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
+                actions = { TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") } },
             )
         },
         floatingActionButton = {
@@ -168,7 +237,7 @@ fun AssetDetailScreen(
             if (displayItems.isEmpty()) {
                 Text(
                     "등록된 소모품이 없습니다. \"소모품 추가\" 버튼을 눌러 추가하세요.",
-                    modifier = Modifier.padding(16.dp).weight(1f),
+                    modifier = Modifier.padding(16.dp),
                 )
             } else {
                 LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
@@ -214,14 +283,54 @@ fun AssetDetailScreen(
                     }
                 }
             }
-            val memo = asset?.memo
-            if (!memo.isNullOrBlank()) {
+
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 HorizontalDivider()
                 Text(
-                    memo,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(16.dp),
+                    "정비 이력",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+                if (uiState.repairRecords.isEmpty()) {
+                    Text(
+                        "교체 주기와 무관하게 고친 내역은 \"정비 이력 추가\"로 남길 수 있어요.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                } else {
+                    uiState.repairRecords.forEach { record ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("🔧 ${record.name}", fontWeight = FontWeight.Bold)
+                                val priceText = record.price?.let { "%,d원".format(it) }
+                                val infoLine = listOfNotNull(record.date.toString(), priceText).joinToString(" · ")
+                                Text(infoLine, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                if (!record.memo.isNullOrBlank()) {
+                                    Text(record.memo, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Row {
+                                TextButton(onClick = { editingRepairRecord = record }) { Text("수정") }
+                                TextButton(onClick = { pendingDeleteRepair = record }) { Text("삭제") }
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+                }
+
+                val memo = asset?.memo
+                if (!memo.isNullOrBlank()) {
+                    HorizontalDivider()
+                    Text(
+                        memo,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
             }
         }
     }

@@ -145,6 +145,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 factory = AssetDetailViewModelFactory(
                     container.assetRepository,
                     container.consumableItemRepository,
+                    container.repairRecordRepository,
                     screen.assetId,
                 ),
                 key = "asset-detail-${screen.assetId}",

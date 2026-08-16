@@ -6,6 +6,7 @@ import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
+import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.photo.PhotoStorage
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +20,7 @@ class AppContainer(context: Context) {
     val consumableItemRepository: ConsumableItemRepository = ConsumableItemRepository(database.consumableItemDao())
     val replacementRecordRepository: ReplacementRecordRepository = ReplacementRecordRepository(database.replacementRecordDao())
     val categoryRepository: CategoryRepository = CategoryRepository(database.categoryDao())
+    val repairRecordRepository: RepairRecordRepository = RepairRecordRepository(database.repairRecordDao())
     val photoStorage: PhotoStorage = PhotoStorage(context)
 
     init {
