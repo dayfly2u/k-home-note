@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import com.khomenote.data.local.entity.ReplacementRecordEntity
 import java.time.LocalDate
 
 data class ReplacementRecordInput(
@@ -34,22 +35,27 @@ data class ReplacementRecordInput(
 
 @Composable
 fun ReplacementRecordDialog(
+    initial: ReplacementRecordEntity? = null,
     onDismiss: () -> Unit,
     onSave: (ReplacementRecordInput) -> Unit,
     onPickPhoto: suspend (Uri) -> String?,
     onDiscardPhoto: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
-    var priceText by remember { mutableStateOf("") }
-    var vendor by remember { mutableStateOf("") }
-    var memo by remember { mutableStateOf("") }
-    var photoPath by remember { mutableStateOf<String?>(null) }
+    var priceText by remember { mutableStateOf(initial?.price?.toString() ?: "") }
+    var vendor by remember { mutableStateOf(initial?.vendor ?: "") }
+    var memo by remember { mutableStateOf(initial?.memo ?: "") }
+    var photoPath by remember { mutableStateOf(initial?.photoUri) }
     var photoError by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedDate by remember { mutableStateOf(initial?.date ?: LocalDate.now()) }
     val scope = rememberCoroutineScope()
 
+    // 원래 붙어있던 사진(수정 시)은 취소하거나 다시 고르는 도중엔 절대 지우지 않는다 —
+    // 이번 다이얼로그 세션에서 새로 골라 아직 저장하지 않은 사진만 정리 대상이다.
+    val originalPhotoPath = initial?.photoUri
+
     fun discardPickedPhotoAndDismiss() {
-        photoPath?.let { onDiscardPhoto(it) }
+        if (photoPath != null && photoPath != originalPhotoPath) onDiscardPhoto(photoPath!!)
         onDismiss()
     }
 
@@ -58,7 +64,8 @@ fun ReplacementRecordDialog(
             scope.launch {
                 val result = onPickPhoto(uri)
                 if (result != null) {
-                    photoPath?.let { onDiscardPhoto(it) }
+                    // 이번 세션에서 이미 한 번 새로 고른 사진이 있으면 그 orphan만 정리한다.
+                    if (photoPath != null && photoPath != originalPhotoPath) onDiscardPhoto(photoPath!!)
                     photoPath = result
                     photoError = false
                 } else {
@@ -71,7 +78,7 @@ fun ReplacementRecordDialog(
 
     AlertDialog(
         onDismissRequest = { discardPickedPhotoAndDismiss() },
-        title = { Text("교체 완료 기록") },
+        title = { Text(if (initial == null) "구매 이력 추가" else "구매 이력 수정") },
         text = {
             Column {
                 TextButton(onClick = {
@@ -109,6 +116,8 @@ fun ReplacementRecordDialog(
         },
         confirmButton = {
             TextButton(onClick = {
+                // 사진을 새로 교체했다면(원래 사진과 다르면) 저장이 확정된 이 시점에만 원래 사진을 지운다.
+                if (photoPath != originalPhotoPath) originalPhotoPath?.let { onDiscardPhoto(it) }
                 onSave(
                     ReplacementRecordInput(
                         date = selectedDate,

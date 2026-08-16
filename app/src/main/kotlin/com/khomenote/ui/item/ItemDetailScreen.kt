@@ -106,6 +106,14 @@ class ItemDetailViewModel(
         }
     }
 
+    fun updateRecord(existing: ReplacementRecordEntity, date: LocalDate, price: Long?, vendor: String?, photoUri: String?, memo: String?) {
+        viewModelScope.launch {
+            replacementRecordRepository.update(
+                existing.copy(date = date, price = price, vendor = vendor, photoUri = photoUri, memo = memo)
+            )
+        }
+    }
+
     fun deleteRecord(record: ReplacementRecordEntity) {
         viewModelScope.launch {
             replacementRecordRepository.delete(record)
@@ -139,6 +147,7 @@ fun ItemDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showRecordDialog by remember { mutableStateOf(false) }
+    var editingRecord by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
     var recordPendingDelete by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
     val status = uiState.status
 
@@ -148,6 +157,19 @@ fun ItemDetailScreen(
             onSave = { input ->
                 viewModel.recordReplacement(input.date, input.price, input.vendor, input.photoUri, input.memo)
                 showRecordDialog = false
+            },
+            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
+        )
+    }
+
+    editingRecord?.let { target ->
+        ReplacementRecordDialog(
+            initial = target,
+            onDismiss = { editingRecord = null },
+            onSave = { input ->
+                viewModel.updateRecord(target, input.date, input.price, input.vendor, input.photoUri, input.memo)
+                editingRecord = null
             },
             onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
             onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
@@ -203,7 +225,7 @@ fun ItemDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text("${status.assetName} · ${status.item.name}", fontWeight = FontWeight.Bold)
-                TextButton(onClick = { showRecordDialog = true }) { Text("구매이력 기록하기") }
+                TextButton(onClick = { showRecordDialog = true }) { Text("구매이력 추가") }
             }
             val cycleLabel = status.item.monthlyDueDay?.let { "매달 ${it}일" } ?: "${status.item.cycleDays}일"
             Text("주기: $cycleLabel / 알림: ${status.item.reminderLeadDays}일 전")
@@ -242,7 +264,10 @@ fun ItemDetailScreen(
                                 if (!record.memo.isNullOrBlank()) Text(record.memo, style = MaterialTheme.typography.bodySmall)
                             }
                         }
-                        TextButton(onClick = { recordPendingDelete = record }) { Text("삭제") }
+                        Row {
+                            TextButton(onClick = { editingRecord = record }) { Text("수정") }
+                            TextButton(onClick = { recordPendingDelete = record }) { Text("삭제") }
+                        }
                     }
                     HorizontalDivider()
                 }

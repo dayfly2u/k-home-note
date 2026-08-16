@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.khomenote.data.local.entity.ReplacementRecordEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -11,6 +12,9 @@ import kotlinx.coroutines.flow.Flow
 interface ReplacementRecordDao {
     @Insert
     suspend fun insert(record: ReplacementRecordEntity): Long
+
+    @Update
+    suspend fun update(record: ReplacementRecordEntity)
 
     @Delete
     suspend fun delete(record: ReplacementRecordEntity)
