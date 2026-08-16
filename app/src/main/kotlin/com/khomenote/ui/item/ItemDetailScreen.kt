@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -177,11 +176,6 @@ fun ItemDetailScreen(
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
             )
         },
-        floatingActionButton = {
-            if (status != null) {
-                ExtendedFloatingActionButton(onClick = { showRecordDialog = true }) { Text("구매이력 기록하기") }
-            }
-        },
     ) { padding ->
         if (!uiState.loaded) {
             Text("불러오는 중...", modifier = Modifier.padding(padding).padding(16.dp))
@@ -204,7 +198,13 @@ fun ItemDetailScreen(
         val daysUntilDue = DueDateCalculator.daysUntilDue(nextDueDate, LocalDate.now())
 
         Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            Text("${status.assetName} · ${status.item.name}", fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("${status.assetName} · ${status.item.name}", fontWeight = FontWeight.Bold)
+                TextButton(onClick = { showRecordDialog = true }) { Text("구매이력 기록하기") }
+            }
             val cycleLabel = status.item.monthlyDueDay?.let { "매달 ${it}일" } ?: "${status.item.cycleDays}일"
             Text("주기: $cycleLabel / 알림: ${status.item.reminderLeadDays}일 전")
             Text(

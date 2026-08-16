@@ -254,14 +254,14 @@ fun AssetDetailScreen(
                                 .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Row {
+                            Row(modifier = Modifier.weight(1f)) {
                                 Text(
                                     "≡",
                                     modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.outline,
                                 )
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Row {
                                         Text(item.name, fontWeight = FontWeight.Bold)
                                         Text(
