@@ -41,9 +41,10 @@ class AssetFormViewModel(
     var memo by mutableStateOf("")
         private set
 
-    // 수정 시 원래 등록일을 보존한다 — 이 값을 안 챙기면 저장할 때마다
-    // AssetEntity 기본값(LocalDate.now())으로 등록일이 오늘로 초기화돼버린다.
+    // 수정 시 원래 등록일/정렬 순서를 보존한다 — 이 값들을 안 챙기면 저장할 때마다
+    // AssetEntity 기본값(오늘 날짜, sortOrder 0)으로 초기화돼버린다.
     private var loadedCreatedAt: LocalDate = LocalDate.now()
+    private var loadedSortOrder: Int? = null
 
     init {
         if (assetId != null) {
@@ -53,6 +54,7 @@ class AssetFormViewModel(
                 category = asset.category
                 memo = asset.memo ?: ""
                 loadedCreatedAt = asset.createdAt
+                loadedSortOrder = asset.sortOrder
             }
         }
     }
@@ -66,6 +68,8 @@ class AssetFormViewModel(
     fun save(onDone: () -> Unit) {
         if (!canSave()) return
         viewModelScope.launch {
+            // 새 자산은 항상 목록 맨 끝에 추가되도록 sortOrder를 현재 개수로 준다.
+            val sortOrder = loadedSortOrder ?: assetRepository.getAll().first().size
             assetRepository.save(
                 AssetEntity(
                     id = assetId ?: 0,
@@ -73,6 +77,7 @@ class AssetFormViewModel(
                     category = category,
                     memo = memo.takeIf { it.isNotBlank() },
                     createdAt = loadedCreatedAt,
+                    sortOrder = sortOrder,
                 )
             )
             onDone()

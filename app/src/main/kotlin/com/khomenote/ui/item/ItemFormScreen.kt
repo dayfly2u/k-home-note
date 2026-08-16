@@ -52,9 +52,10 @@ class ItemFormViewModel(
 
     private var loadedAssetId: Long? = assetIdForNew
 
-    // 수정 시 원래 등록일을 보존한다 — AssetFormViewModel과 같은 이유로,
+    // 수정 시 원래 등록일/정렬 순서를 보존한다 — AssetFormViewModel과 같은 이유로,
     // 안 챙기면 저장할 때마다 등록일이 오늘로 리셋되어 다음 예정일 계산이 틀어진다.
     private var loadedCreatedAt: LocalDate = LocalDate.now()
+    private var loadedSortOrder: Int? = null
 
     val cycleDays: Int
         get() = (cycleValueText.toIntOrNull() ?: 0) * cycleUnit.days
@@ -70,6 +71,7 @@ class ItemFormViewModel(
                 memo = item.memo ?: ""
                 loadedAssetId = item.assetId
                 loadedCreatedAt = item.createdAt
+                loadedSortOrder = item.sortOrder
             }
         }
     }
@@ -86,6 +88,8 @@ class ItemFormViewModel(
         val assetId = loadedAssetId ?: return
         if (!canSave()) return
         viewModelScope.launch {
+            // 새 소모품은 항상 그 자산의 목록 맨 끝에 추가되도록 sortOrder를 현재 개수로 준다.
+            val sortOrder = loadedSortOrder ?: consumableItemRepository.getByAsset(assetId).first().size
             consumableItemRepository.save(
                 ConsumableItemEntity(
                     id = itemId ?: 0,
@@ -95,6 +99,7 @@ class ItemFormViewModel(
                     reminderLeadDays = reminderLeadDaysText.toIntOrNull() ?: 7,
                     memo = memo.takeIf { it.isNotBlank() },
                     createdAt = loadedCreatedAt,
+                    sortOrder = sortOrder,
                 )
             )
             onDone()

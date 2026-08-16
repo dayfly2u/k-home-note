@@ -11,4 +11,5 @@ data class AssetEntity(
     val category: AssetCategory,
     val memo: String? = null,
     val createdAt: LocalDate = LocalDate.now(),
+    val sortOrder: Int = 0,
 )

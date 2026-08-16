@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +37,9 @@ import com.khomenote.data.local.entity.AssetEntity
 import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.ConsumableItemRepository
+import com.khomenote.ui.common.dragElevation
+import com.khomenote.ui.common.dragHandle
+import com.khomenote.ui.common.rememberDragDropListState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -54,6 +59,10 @@ class AssetListViewModel(
 
     suspend fun hasItems(assetId: Long): Boolean =
         consumableItemRepository.getByAsset(assetId).first().isNotEmpty()
+
+    fun reorder(orderedAssets: List<AssetEntity>) {
+        viewModelScope.launch { assetRepository.reorder(orderedAssets) }
+    }
 }
 
 class AssetListViewModelFactory(
@@ -77,6 +86,23 @@ fun AssetListScreen(
     var pendingDelete by remember { mutableStateOf<AssetEntity?>(null) }
     var blockedDelete by remember { mutableStateOf<AssetEntity?>(null) }
     val scope = rememberCoroutineScope()
+
+    // 드래그 중에는 화면에 보이는 순서(displayAssets)를 직접 바꾸고, 드래그가
+    // 끝나야 DB에 저장한다. Flow(assets)가 새로 값을 흘려보내도 드래그 중에는
+    // 그걸로 덮어쓰지 않아야 드래그 도중 화면이 튀지 않는다.
+    var displayAssets by remember { mutableStateOf(assets) }
+    val listState = rememberLazyListState()
+    val dragState = rememberDragDropListState(
+        listState = listState,
+        itemCount = { displayAssets.size },
+        onMove = { from, to ->
+            displayAssets = displayAssets.toMutableList().apply { add(to, removeAt(from)) }
+        },
+        onReorderFinished = { viewModel.reorder(displayAssets) },
+    )
+    LaunchedEffect(assets) {
+        if (dragState.draggingItemIndex == null) displayAssets = assets
+    }
 
     fun requestDelete(asset: AssetEntity) {
         scope.launch {
@@ -123,30 +149,39 @@ fun AssetListScreen(
             ExtendedFloatingActionButton(onClick = onAddAsset) { Text("자산 추가") }
         },
     ) { padding ->
-        if (assets.isEmpty()) {
+        if (displayAssets.isEmpty()) {
             Text(
                 "등록된 자산이 없습니다. \"자산 추가\" 버튼을 눌러 추가하세요.",
                 modifier = Modifier.padding(padding).padding(16.dp),
             )
             return@Scaffold
         }
-        LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
-            items(assets, key = { it.id }) { asset ->
+        LazyColumn(state = listState, modifier = Modifier.padding(padding).fillMaxSize()) {
+            itemsIndexed(displayAssets, key = { _, asset -> asset.id }) { index, asset ->
                 Row(
                     modifier = Modifier.fillMaxWidth()
+                        .dragElevation(index, dragState)
                         .clickable { onAssetClick(asset.id) }
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Column {
-                        Text(asset.category.label)
-                        Text(asset.name, fontWeight = FontWeight.Bold)
-                        if (!asset.memo.isNullOrBlank()) {
-                            Text(
-                                asset.memo,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
+                    Row {
+                        Text(
+                            "≡",
+                            modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        Column {
+                            Text(asset.category.label)
+                            Text(asset.name, fontWeight = FontWeight.Bold)
+                            if (!asset.memo.isNullOrBlank()) {
+                                Text(
+                                    asset.memo,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
                         }
                     }
                     TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }

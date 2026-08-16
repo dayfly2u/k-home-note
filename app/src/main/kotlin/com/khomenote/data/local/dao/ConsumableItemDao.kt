@@ -17,13 +17,16 @@ interface ConsumableItemDao {
     @Update
     suspend fun update(item: ConsumableItemEntity)
 
+    @Update
+    suspend fun updateAll(items: List<ConsumableItemEntity>)
+
     @Delete
     suspend fun delete(item: ConsumableItemEntity)
 
     @Query("SELECT * FROM consumable_items WHERE id = :itemId")
     fun getById(itemId: Long): Flow<ConsumableItemEntity?>
 
-    @Query("SELECT * FROM consumable_items WHERE assetId = :assetId ORDER BY name ASC")
+    @Query("SELECT * FROM consumable_items WHERE assetId = :assetId ORDER BY sortOrder ASC, id ASC")
     fun getByAsset(assetId: Long): Flow<List<ConsumableItemEntity>>
 
     @Query(

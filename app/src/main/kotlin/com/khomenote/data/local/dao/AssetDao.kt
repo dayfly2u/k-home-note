@@ -16,10 +16,13 @@ interface AssetDao {
     @Update
     suspend fun update(asset: AssetEntity)
 
+    @Update
+    suspend fun updateAll(assets: List<AssetEntity>)
+
     @Delete
     suspend fun delete(asset: AssetEntity)
 
-    @Query("SELECT * FROM assets ORDER BY createdAt DESC, id DESC")
+    @Query("SELECT * FROM assets ORDER BY sortOrder ASC, id ASC")
     fun getAll(): Flow<List<AssetEntity>>
 
     @Query("SELECT * FROM assets WHERE id = :assetId")

@@ -27,4 +27,5 @@ data class ConsumableItemEntity(
     val memo: String? = null,
     val createdAt: LocalDate = LocalDate.now(),
     val lastNotifiedForDate: LocalDate? = null,
+    val sortOrder: Int = 0,
 )

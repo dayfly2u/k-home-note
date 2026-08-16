@@ -8,7 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +37,9 @@ import com.khomenote.data.local.entity.ConsumableItemEntity
 import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.ConsumableItemRepository
+import com.khomenote.ui.common.dragElevation
+import com.khomenote.ui.common.dragHandle
+import com.khomenote.ui.common.rememberDragDropListState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -59,6 +64,10 @@ class AssetDetailViewModel(
 
     fun deleteItem(item: ConsumableItemEntity) {
         viewModelScope.launch { consumableItemRepository.delete(item) }
+    }
+
+    fun reorderItems(orderedItems: List<ConsumableItemEntity>) {
+        viewModelScope.launch { consumableItemRepository.reorder(orderedItems) }
     }
 }
 
@@ -85,6 +94,20 @@ fun AssetDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<ConsumableItemEntity?>(null) }
     val asset = uiState.asset
+
+    var displayItems by remember { mutableStateOf(uiState.items) }
+    val listState = rememberLazyListState()
+    val dragState = rememberDragDropListState(
+        listState = listState,
+        itemCount = { displayItems.size },
+        onMove = { from, to ->
+            displayItems = displayItems.toMutableList().apply { add(to, removeAt(from)) }
+        },
+        onReorderFinished = { viewModel.reorderItems(displayItems) },
+    )
+    LaunchedEffect(uiState.items) {
+        if (dragState.draggingItemIndex == null) displayItems = uiState.items
+    }
 
     pendingDelete?.let { item ->
         AlertDialog(
@@ -122,28 +145,37 @@ fun AssetDetailScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-            if (uiState.items.isEmpty()) {
+            if (displayItems.isEmpty()) {
                 Text(
                     "등록된 소모품이 없습니다. \"소모품 추가\" 버튼을 눌러 추가하세요.",
                     modifier = Modifier.padding(16.dp).weight(1f),
                 )
             } else {
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(uiState.items, key = { it.id }) { item ->
+                LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+                    itemsIndexed(displayItems, key = { _, item -> item.id }) { index, item ->
                         Row(
                             modifier = Modifier.fillMaxWidth()
+                                .dragElevation(index, dragState)
                                 .clickable { onItemClick(item.id) }
                                 .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Column {
-                                Text(item.name, fontWeight = FontWeight.Bold)
-                                if (!item.memo.isNullOrBlank()) {
-                                    Text(
-                                        item.memo,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                    )
+                            Row {
+                                Text(
+                                    "≡",
+                                    modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                                Column {
+                                    Text(item.name, fontWeight = FontWeight.Bold)
+                                    if (!item.memo.isNullOrBlank()) {
+                                        Text(
+                                            item.memo,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                        )
+                                    }
                                 }
                             }
                             Row {
