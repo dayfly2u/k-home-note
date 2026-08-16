@@ -194,7 +194,7 @@ fun HomeScreen(
                                 fontWeight = if (uiModel.daysUntilDue <= 0) FontWeight.Bold else FontWeight.Normal,
                             )
                         }
-                        TextButton(onClick = { recordDialogItemId = uiModel.status.item.id }) { Text("교체 완료") }
+                        TextButton(onClick = { recordDialogItemId = uiModel.status.item.id }) { Text("구매이력 기록하기") }
                     }
                     HorizontalDivider()
                 }

@@ -240,7 +240,7 @@ fun ItemDetailScreen(
                 Text(status.item.memo, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(Modifier.height(12.dp))
-            Button(onClick = { showRecordDialog = true }) { Text("교체 완료") }
+            Button(onClick = { showRecordDialog = true }) { Text("구매이력 기록하기") }
             Spacer(Modifier.height(16.dp))
             Text("교체/구매 이력", fontWeight = FontWeight.Bold)
             if (uiState.records.isEmpty()) {
