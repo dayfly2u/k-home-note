@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -176,6 +177,11 @@ fun ItemDetailScreen(
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
             )
         },
+        floatingActionButton = {
+            if (status != null) {
+                ExtendedFloatingActionButton(onClick = { showRecordDialog = true }) { Text("구매이력 기록하기") }
+            }
+        },
     ) { padding ->
         if (!uiState.loaded) {
             Text("불러오는 중...", modifier = Modifier.padding(padding).padding(16.dp))
@@ -207,8 +213,6 @@ fun ItemDetailScreen(
             if (!status.item.memo.isNullOrBlank()) {
                 Text(status.item.memo, style = MaterialTheme.typography.bodySmall)
             }
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = { showRecordDialog = true }) { Text("구매이력 기록하기") }
             Spacer(Modifier.height(16.dp))
             Text("교체/구매 이력", fontWeight = FontWeight.Bold)
             if (uiState.records.isEmpty()) {
