@@ -79,6 +79,7 @@ fun AssetDetailScreen(
     onEditAsset: () -> Unit,
     onAddItem: () -> Unit,
     onItemClick: (Long) -> Unit,
+    onEditItem: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -145,7 +146,10 @@ fun AssetDetailScreen(
                                     )
                                 }
                             }
-                            TextButton(onClick = { pendingDelete = item }) { Text("삭제") }
+                            Row {
+                                TextButton(onClick = { onEditItem(item.id) }) { Text("수정") }
+                                TextButton(onClick = { pendingDelete = item }) { Text("삭제") }
+                            }
                         }
                         HorizontalDivider()
                     }

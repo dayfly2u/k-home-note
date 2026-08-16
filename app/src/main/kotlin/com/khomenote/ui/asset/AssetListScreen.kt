@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -33,26 +34,35 @@ import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.entity.AssetEntity
 import com.khomenote.data.local.entity.label
 import com.khomenote.data.repository.AssetRepository
+import com.khomenote.data.repository.ConsumableItemRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class AssetListViewModel(private val assetRepository: AssetRepository) : ViewModel() {
+class AssetListViewModel(
+    private val assetRepository: AssetRepository,
+    private val consumableItemRepository: ConsumableItemRepository,
+) : ViewModel() {
     val assets: StateFlow<List<AssetEntity>> = assetRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun delete(asset: AssetEntity) {
         viewModelScope.launch { assetRepository.delete(asset) }
     }
+
+    suspend fun hasItems(assetId: Long): Boolean =
+        consumableItemRepository.getByAsset(assetId).first().isNotEmpty()
 }
 
 class AssetListViewModelFactory(
     private val assetRepository: AssetRepository,
+    private val consumableItemRepository: ConsumableItemRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        AssetListViewModel(assetRepository) as T
+        AssetListViewModel(assetRepository, consumableItemRepository) as T
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,12 +75,24 @@ fun AssetListScreen(
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<AssetEntity?>(null) }
+    var blockedDelete by remember { mutableStateOf<AssetEntity?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun requestDelete(asset: AssetEntity) {
+        scope.launch {
+            if (viewModel.hasItems(asset.id)) {
+                blockedDelete = asset
+            } else {
+                pendingDelete = asset
+            }
+        }
+    }
 
     pendingDelete?.let { asset ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("자산을 삭제할까요?") },
-            text = { Text("\"${asset.name}\"과 딸린 소모품·이력이 모두 삭제되며 되돌릴 수 없습니다.") },
+            text = { Text("\"${asset.name}\"이 삭제되며 되돌릴 수 없습니다.") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(asset)
@@ -78,6 +100,15 @@ fun AssetListScreen(
                 }) { Text("삭제") }
             },
             dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("취소") } },
+        )
+    }
+
+    blockedDelete?.let { asset ->
+        AlertDialog(
+            onDismissRequest = { blockedDelete = null },
+            title = { Text("삭제할 수 없습니다") },
+            text = { Text("\"${asset.name}\"에 등록된 소모품이 있습니다. 먼저 소모품을 모두 삭제한 뒤 다시 시도해주세요.") },
+            confirmButton = { TextButton(onClick = { blockedDelete = null }) { Text("확인") } },
         )
     }
 
@@ -118,7 +149,7 @@ fun AssetListScreen(
                             )
                         }
                     }
-                    TextButton(onClick = { pendingDelete = asset }) { Text("삭제") }
+                    TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
                 }
                 HorizontalDivider()
             }

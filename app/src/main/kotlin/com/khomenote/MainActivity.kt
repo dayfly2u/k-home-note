@@ -114,7 +114,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
 
         is Screen.AssetList -> {
             val vm = viewModel<AssetListViewModel>(
-                factory = AssetListViewModelFactory(container.assetRepository),
+                factory = AssetListViewModelFactory(container.assetRepository, container.consumableItemRepository),
             )
             AssetListScreen(
                 viewModel = vm,
@@ -146,6 +146,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 onEditAsset = { push(Screen.AssetForm(screen.assetId)) },
                 onAddItem = { push(Screen.ItemForm(screen.assetId, null)) },
                 onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
+                onEditItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },
                 onBack = { pop() },
             )
         }
