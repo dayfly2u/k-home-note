@@ -153,6 +153,12 @@ fun AssetDetailScreen(
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (displayItems.isNotEmpty()) {
                 Text(
+                    "해당 소모품의 구매이력을 기록하려면 소모품이름을 누르세요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                Text(
                     "손잡이(≡)를 1초간 꾹 눌렀다가 위아래로 드래그하면 순서를 바꿀 수 있어요.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
