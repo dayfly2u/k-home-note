@@ -1,5 +1,6 @@
 package com.khomenote.ui.asset
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -56,6 +58,12 @@ private val ITEM_ROW_HEIGHT = 72.dp
 private val REPAIR_ROW_HEIGHT = 96.dp
 private const val VISIBLE_ITEM_ROWS = 5
 private const val VISIBLE_REPAIR_ROWS = 3
+
+// 소모품 목록은 연한빨강, 정비이력 목록은 연한녹색 타이틀 바로 한눈에 구분되게 한다.
+private val SECTION_ITEM_COLOR = Color(0xFFFFCDD2)
+private val SECTION_ITEM_TEXT_COLOR = Color(0xFFC62828)
+private val SECTION_REPAIR_COLOR = Color(0xFFC8E6C9)
+private val SECTION_REPAIR_TEXT_COLOR = Color(0xFF2E7D32)
 
 /**
  * monthlyDueDay가 있으면 "매달 N일"로, 없으면 cycleDays를 "1yr 3m" 형태로 보여준다.
@@ -230,25 +238,13 @@ fun AssetDetailScreen(
             modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .background(SECTION_ITEM_COLOR)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("소모품", fontWeight = FontWeight.Bold)
+                Text("소모품", fontWeight = FontWeight.Bold, color = SECTION_ITEM_TEXT_COLOR)
                 TextButton(onClick = onAddItem) { Text("소모품 추가") }
-            }
-            if (displayItems.isNotEmpty()) {
-                Text(
-                    "해당 소모품의 구매이력을 기록하려면 소모품이름을 누르세요.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-                Text(
-                    "손잡이(≡)를 1초간 꾹 눌렀다가 위아래로 드래그하면 순서를 바꿀 수 있어요.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
             }
             if (displayItems.isEmpty()) {
                 Text(
@@ -303,12 +299,13 @@ fun AssetDetailScreen(
                 }
             }
 
-            HorizontalDivider()
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth()
+                    .background(SECTION_REPAIR_COLOR)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("정비 이력", fontWeight = FontWeight.Bold)
+                Text("정비 이력", fontWeight = FontWeight.Bold, color = SECTION_REPAIR_TEXT_COLOR)
                 TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") }
             }
             if (uiState.repairRecords.isEmpty()) {

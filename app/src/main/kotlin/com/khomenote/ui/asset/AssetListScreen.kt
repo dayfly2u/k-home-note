@@ -190,18 +190,6 @@ fun AssetListScreen(
                     )
                 }
             }
-            Text(
-                "각 자산의 세부 소모품을 추가하려면 자산이름을 누르세요.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-            Text(
-                "손잡이(≡)를 1초간 꾹 눌렀다가 위아래로 드래그하면 순서를 바꿀 수 있어요.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
             if (visibleAssets.isEmpty()) {
                 Text(
                     "해당 카테고리에 등록된 자산이 없습니다.",
