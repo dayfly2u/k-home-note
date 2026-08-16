@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -165,10 +164,8 @@ fun AssetListScreen(
             TopAppBar(
                 title = { Text("자산 관리") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
+                actions = { TextButton(onClick = onAddAsset) { Text("자산 추가") } },
             )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onAddAsset) { Text("자산 추가") }
         },
     ) { padding ->
         if (displayAssets.isEmpty()) {

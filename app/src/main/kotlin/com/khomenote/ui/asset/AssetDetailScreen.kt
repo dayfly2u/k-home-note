@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -215,14 +214,17 @@ fun AssetDetailScreen(
             TopAppBar(
                 title = { Text(asset?.name ?: "자산") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
-                actions = { TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") } },
             )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onAddItem) { Text("소모품 추가") }
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("소모품", fontWeight = FontWeight.Bold)
+                TextButton(onClick = onAddItem) { Text("소모품 추가") }
+            }
             if (displayItems.isNotEmpty()) {
                 Text(
                     "해당 소모품의 구매이력을 기록하려면 소모품이름을 누르세요.",
@@ -289,11 +291,13 @@ fun AssetDetailScreen(
 
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 HorizontalDivider()
-                Text(
-                    "정비 이력",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("정비 이력", fontWeight = FontWeight.Bold)
+                    TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") }
+                }
                 if (uiState.repairRecords.isEmpty()) {
                     Text(
                         "교체 주기와 무관하게 고친 내역은 \"정비 이력 추가\"로 남길 수 있어요.",
