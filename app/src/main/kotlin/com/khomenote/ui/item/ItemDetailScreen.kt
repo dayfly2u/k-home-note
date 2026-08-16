@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +39,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -152,7 +156,20 @@ fun ItemDetailScreen(
     var showRecordDialog by remember { mutableStateOf(false) }
     var editingRecord by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
     var recordPendingDelete by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
+    var expandedPhotoPath by remember { mutableStateOf<String?>(null) }
     val status = uiState.status
+
+    expandedPhotoPath?.let { path ->
+        Dialog(
+            onDismissRequest = { expandedPhotoPath = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            LocalPhotoThumbnail(
+                path = path,
+                modifier = Modifier.fillMaxWidth().padding(24.dp).clickable { expandedPhotoPath = null },
+            )
+        }
+    }
 
     if (showRecordDialog) {
         ReplacementRecordDialog(
@@ -245,8 +262,9 @@ fun ItemDetailScreen(
                 "교체/구매 이력",
                 fontWeight = FontWeight.Bold,
                 color = SECTION_TITLE_TEXT_COLOR,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.fillMaxWidth().background(SECTION_TITLE_COLOR).padding(horizontal = 8.dp, vertical = 2.dp),
+                modifier = Modifier
+                    .background(SECTION_TITLE_COLOR, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
             )
             if (uiState.records.isEmpty()) {
                 Text("아직 기록된 이력이 없습니다.", style = MaterialTheme.typography.bodySmall)
@@ -261,7 +279,7 @@ fun ItemDetailScreen(
                             if (record.photoUri != null) {
                                 LocalPhotoThumbnail(
                                     path = record.photoUri,
-                                    modifier = Modifier.size(48.dp),
+                                    modifier = Modifier.size(48.dp).clickable { expandedPhotoPath = record.photoUri },
                                 )
                                 Spacer(Modifier.width(8.dp))
                             }

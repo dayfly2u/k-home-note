@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
@@ -15,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -237,21 +238,19 @@ fun AssetDetailScreen(
             modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth()
-                    .background(SECTION_TITLE_COLOR)
-                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     "소모품",
                     fontWeight = FontWeight.Bold,
                     color = SECTION_TITLE_TEXT_COLOR,
-                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .background(SECTION_TITLE_COLOR, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
-                TextButton(
-                    onClick = onAddItem,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                ) { Text("소모품 추가", style = MaterialTheme.typography.bodySmall) }
+                TextButton(onClick = onAddItem) { Text("소모품 추가") }
             }
             if (displayItems.isEmpty()) {
                 Text(
@@ -307,21 +306,19 @@ fun AssetDetailScreen(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth()
-                    .background(SECTION_TITLE_COLOR)
-                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     "정비 이력",
                     fontWeight = FontWeight.Bold,
                     color = SECTION_TITLE_TEXT_COLOR,
-                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .background(SECTION_TITLE_COLOR, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
-                TextButton(
-                    onClick = { showRepairDialog = true },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                ) { Text("정비 이력 추가", style = MaterialTheme.typography.bodySmall) }
+                TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") }
             }
             if (uiState.repairRecords.isEmpty()) {
                 Text(
