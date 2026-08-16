@@ -118,14 +118,6 @@ class ItemDetailViewModel(
     fun discardPhoto(path: String) {
         viewModelScope.launch(Dispatchers.IO) { photoStorage.deletePhoto(path) }
     }
-
-    fun deleteItem(onDone: () -> Unit) {
-        val item = uiState.value.status?.item ?: return
-        viewModelScope.launch {
-            consumableItemRepository.delete(item)
-            onDone()
-        }
-    }
 }
 
 class ItemDetailViewModelFactory(
@@ -143,13 +135,10 @@ class ItemDetailViewModelFactory(
 @Composable
 fun ItemDetailScreen(
     viewModel: ItemDetailViewModel,
-    onEditItem: () -> Unit,
-    onDeleted: () -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showRecordDialog by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
     var recordPendingDelete by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
     val status = uiState.status
 
@@ -162,21 +151,6 @@ fun ItemDetailScreen(
             },
             onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
             onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
-        )
-    }
-
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("소모품을 삭제할까요?") },
-            text = { Text("교체 이력이 모두 삭제되며 되돌릴 수 없습니다.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteConfirm = false
-                    viewModel.deleteItem(onDeleted)
-                }) { Text("삭제") }
-            },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("취소") } },
         )
     }
 
@@ -200,12 +174,6 @@ fun ItemDetailScreen(
             TopAppBar(
                 title = { Text(status?.item?.name ?: "소모품") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
-                actions = {
-                    TextButton(onClick = onEditItem) { Text("수정") }
-                    TextButton(onClick = { showDeleteConfirm = true }) {
-                        Text("삭제", color = MaterialTheme.colorScheme.error)
-                    }
-                },
             )
         },
     ) { padding ->

@@ -171,8 +171,6 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
             )
             ItemDetailScreen(
                 viewModel = vm,
-                onEditItem = { push(Screen.ItemForm(assetId = null, itemId = screen.itemId)) },
-                onDeleted = { pop() },
                 onBack = { pop() },
             )
         }
