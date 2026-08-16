@@ -1,6 +1,7 @@
 package com.khomenote.ui.category
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -50,13 +52,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** 카테고리 추가/수정 다이얼로그에서 고를 수 있는, 생활(집/가전/자동차/카드) 위주의 이모지. */
+/** 카테고리 추가/수정 다이얼로그에서 고를 수 있는, 생활(집/가전/자동차/카드) 위주의 이모지. 5x5로 배치. */
 val CATEGORY_EMOJI_PALETTE = listOf(
-    "🏠", "🔌", "🚗", "💳", "🚙", "🏍️",
-    "🚲", "📺", "❄️", "🔥", "💧", "🧹",
-    "🛋️", "🛁", "💡", "🏢", "🏡", "🐶",
-    "🌱", "🎓", "📱", "💻", "🏥", "✈️",
-    "📦", "🔧", "⚡", "🍽️", "🏦", "💰",
+    "🏠", "🔌", "🚗", "💳", "🚙",
+    "🏍️", "🚲", "📺", "❄️", "🔥",
+    "💧", "🧹", "🛋️", "🛁", "💡",
+    "🏢", "🏡", "🐶", "📱", "💻",
+    "🔧", "⚡", "🍽️", "🏦", "💰",
 )
 
 class CategoryManagementViewModel(private val categoryRepository: CategoryRepository) : ViewModel() {
@@ -176,6 +178,7 @@ fun CategoryManagementScreen(
         CategoryEditDialog(
             initial = null,
             checkNameAvailable = { candidate -> viewModel.isNameAvailable(candidate) },
+            isEmojiTaken = { candidate -> categories.any { it.emoji == candidate } },
             onDismiss = { showAddDialog = false },
             onSave = { name, emoji ->
                 viewModel.save(CategoryEntity(name = name, emoji = emoji, sortOrder = displayCategories.size))
@@ -188,6 +191,7 @@ fun CategoryManagementScreen(
         CategoryEditDialog(
             initial = target,
             checkNameAvailable = { candidate -> viewModel.isNameAvailable(candidate, excludingId = target.id) },
+            isEmojiTaken = { candidate -> categories.any { it.emoji == candidate && it.id != target.id } },
             onDismiss = { editingTarget = null },
             onSave = { name, emoji ->
                 viewModel.save(target.copy(name = name, emoji = emoji))
@@ -210,6 +214,7 @@ fun CategoryManagementScreen(
 private fun CategoryEditDialog(
     initial: CategoryEntity?,
     checkNameAvailable: suspend (String) -> Boolean,
+    isEmojiTaken: (String) -> Boolean,
     onDismiss: () -> Unit,
     onSave: (name: String, emoji: String) -> Unit,
 ) {
@@ -237,6 +242,14 @@ private fun CategoryEditDialog(
                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
                 )
                 CategoryEmojiGrid(selected = emoji, onSelected = { emoji = it })
+                if (isEmojiTaken(emoji)) {
+                    Text(
+                        "이미 다른 카테고리에서 사용 중인 이모지입니다.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
         },
         confirmButton = {
@@ -258,7 +271,7 @@ private fun CategoryEditDialog(
 @Composable
 private fun CategoryEmojiGrid(selected: String, onSelected: (String) -> Unit) {
     Column {
-        CATEGORY_EMOJI_PALETTE.chunked(6).forEach { rowEmojis ->
+        CATEGORY_EMOJI_PALETTE.chunked(5).forEach { rowEmojis ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 rowEmojis.forEach { candidate ->
                     val isSelected = candidate == selected
@@ -266,18 +279,21 @@ private fun CategoryEmojiGrid(selected: String, onSelected: (String) -> Unit) {
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .padding(4.dp)
-                            .size(40.dp)
+                            .size(52.dp)
                             .clip(CircleShape)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            )
                             .then(
                                 if (isSelected) {
-                                    Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+                                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                 } else {
-                                    Modifier
+                                    Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                                 }
                             )
                             .clickable { onSelected(candidate) },
                     ) {
-                        Text(candidate, style = MaterialTheme.typography.headlineSmall)
+                        Text(candidate, style = MaterialTheme.typography.headlineMedium)
                     }
                 }
             }

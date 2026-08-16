@@ -91,6 +91,7 @@ class HomeViewModelFactory(
 fun HomeScreen(
     viewModel: HomeViewModel,
     onManageAssets: () -> Unit,
+    onManageCategories: () -> Unit,
     onItemClick: (Long) -> Unit,
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
@@ -105,7 +106,10 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { Text("K-Home-Note") },
-                actions = { TextButton(onClick = onManageAssets) { Text("자산 관리") } },
+                actions = {
+                    TextButton(onClick = onManageAssets) { Text("자산 관리") }
+                    TextButton(onClick = onManageCategories) { Text("카테고리 관리") }
+                },
             )
         },
     ) { padding ->

@@ -80,7 +80,6 @@ fun AssetListScreen(
     onAddAsset: () -> Unit,
     onAssetClick: (Long) -> Unit,
     onEditAsset: (Long) -> Unit,
-    onManageCategories: () -> Unit,
     onBack: () -> Unit,
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
@@ -144,7 +143,6 @@ fun AssetListScreen(
             TopAppBar(
                 title = { Text("자산 관리") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
-                actions = { TextButton(onClick = onManageCategories) { Text("카테고리 관리") } },
             )
         },
         floatingActionButton = {

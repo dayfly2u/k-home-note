@@ -107,6 +107,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
             HomeScreen(
                 viewModel = vm,
                 onManageAssets = { push(Screen.AssetList) },
+                onManageCategories = { push(Screen.CategoryManagement) },
                 onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
             )
         }
@@ -120,7 +121,6 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 onAddAsset = { push(Screen.AssetForm(null)) },
                 onAssetClick = { assetId -> push(Screen.AssetDetail(assetId)) },
                 onEditAsset = { assetId -> push(Screen.AssetForm(assetId)) },
-                onManageCategories = { push(Screen.CategoryManagement) },
                 onBack = { pop() },
             )
         }
