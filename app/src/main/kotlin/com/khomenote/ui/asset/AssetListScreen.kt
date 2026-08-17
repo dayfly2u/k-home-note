@@ -43,6 +43,7 @@ import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -59,6 +60,15 @@ class AssetListViewModel(
 
     val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // remember{}로 화면(Composable)에만 두면 다른 화면으로 넘어갔다가 뒤로 왔을 때
+    // 화면이 다시 조립되며 필터가 초기화된다 — ViewModel에 둬서 화면을 나갔다 와도 유지되게 한다.
+    private val _categoryFilter = MutableStateFlow<Long?>(null)
+    val categoryFilter: StateFlow<Long?> = _categoryFilter
+
+    fun setCategoryFilter(categoryId: Long?) {
+        _categoryFilter.value = categoryId
+    }
 
     fun delete(asset: AssetWithCategory) {
         viewModelScope.launch { assetRepository.delete(asset.asset) }
@@ -93,7 +103,7 @@ fun AssetListScreen(
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
-    var categoryFilter by remember { mutableStateOf<Long?>(null) }
+    val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
     var blockedDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
     val scope = rememberCoroutineScope()
@@ -181,11 +191,15 @@ fun AssetListScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(selected = categoryFilter == null, onClick = { categoryFilter = null }, label = { Text("전체") })
+                FilterChip(
+                    selected = categoryFilter == null,
+                    onClick = { viewModel.setCategoryFilter(null) },
+                    label = { Text("전체") },
+                )
                 categories.forEach { category ->
                     FilterChip(
                         selected = categoryFilter == category.id,
-                        onClick = { categoryFilter = category.id },
+                        onClick = { viewModel.setCategoryFilter(category.id) },
                         label = { Text("${category.emoji} ${category.name}") },
                     )
                 }
