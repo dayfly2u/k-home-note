@@ -24,9 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +39,7 @@ import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.domain.DueDateCalculator
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -60,6 +59,15 @@ class HomeViewModel(
 
     val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // remember{}로 화면(Composable)에만 두면 항목 클릭 후 뒤로 왔을 때 화면이
+    // 다시 조립되며 필터가 초기화된다 — ViewModel에 둬서 화면을 나갔다 와도 유지되게 한다.
+    private val _categoryFilter = MutableStateFlow<Long?>(null)
+    val categoryFilter: StateFlow<Long?> = _categoryFilter
+
+    fun setCategoryFilter(categoryId: Long?) {
+        _categoryFilter.value = categoryId
+    }
 
     // 정렬 기준이 nextDueDate 오름차순이라, 연체(과거 날짜) 항목이 자연히
     // 맨 앞에 온다 — 화면에서 별도로 "연체는 위로" 정렬 로직을 두지 않아도 된다.
@@ -114,7 +122,7 @@ fun HomeScreen(
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
-    var categoryFilter by remember { mutableStateOf<Long?>(null) }
+    val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
 
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.status.categoryId == categoryFilter }
@@ -138,11 +146,15 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(selected = categoryFilter == null, onClick = { categoryFilter = null }, label = { Text("전체") })
+                FilterChip(
+                    selected = categoryFilter == null,
+                    onClick = { viewModel.setCategoryFilter(null) },
+                    label = { Text("전체") },
+                )
                 categories.forEach { category ->
                     FilterChip(
                         selected = categoryFilter == category.id,
-                        onClick = { categoryFilter = category.id },
+                        onClick = { viewModel.setCategoryFilter(category.id) },
                         label = { Text("${category.emoji} ${category.name}") },
                     )
                 }
