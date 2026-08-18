@@ -184,7 +184,13 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("K-Home-Note") })
+            TopAppBar(
+                title = { Text("K-Home-Note") },
+                actions = {
+                    TextButton(onClick = onManageAssets) { Text("자산 관리") }
+                    TextButton(onClick = onManageCategories) { Text("카테고리 관리") }
+                },
+            )
         },
         bottomBar = {
             Row(
@@ -203,13 +209,6 @@ fun HomeScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onManageAssets) { Text("자산 관리") }
-                TextButton(onClick = onManageCategories) { Text("카테고리 관리") }
-            }
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 8.dp),
