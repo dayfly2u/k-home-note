@@ -10,6 +10,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -185,6 +186,21 @@ fun HomeScreen(
         topBar = {
             TopAppBar(title = { Text("K-Home-Note") })
         },
+        bottomBar = {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                TextButton(
+                    onClick = { backupLauncher.launch(BackupManager.backupFileName()) },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                ) { Text("백업", style = MaterialTheme.typography.bodySmall) }
+                TextButton(
+                    onClick = { restoreLauncher.launch(arrayOf("*/*")) },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                ) { Text("복원", style = MaterialTheme.typography.bodySmall) }
+            }
+        },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             Row(
@@ -193,13 +209,6 @@ fun HomeScreen(
             ) {
                 TextButton(onClick = onManageAssets) { Text("자산 관리") }
                 TextButton(onClick = onManageCategories) { Text("카테고리 관리") }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = { backupLauncher.launch(BackupManager.backupFileName()) }) { Text("백업") }
-                TextButton(onClick = { restoreLauncher.launch(arrayOf("*/*")) }) { Text("복원") }
             }
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
