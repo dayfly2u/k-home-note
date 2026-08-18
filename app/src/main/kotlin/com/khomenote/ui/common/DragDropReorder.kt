@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -54,8 +55,9 @@ class DragDropListState(
         if (itemHeight <= 0f) return
 
         val moveBy = (draggingItemOffset / itemHeight).toInt()
-        if (moveBy != 0) {
-            val targetIndex = (currentIndex + moveBy).coerceIn(0, itemCount() - 1)
+        val count = itemCount()
+        if (moveBy != 0 && count > 0) {
+            val targetIndex = (currentIndex + moveBy).coerceIn(0, count - 1)
             if (targetIndex != currentIndex) {
                 onMove(currentIndex, targetIndex)
                 draggingItemIndex = targetIndex
@@ -102,7 +104,23 @@ fun rememberDragDropListState(
     onReorderFinished: () -> Unit,
 ): DragDropListState {
     val scope = rememberCoroutineScope()
-    return remember(listState) { DragDropListState(listState, scope, itemCount, onMove, onReorderFinished) }
+    // remember(listState){}는 listState가 안 바뀌는 한 딱 한 번만 실행되기 때문에, 람다를
+    // 그대로 넘기면 "첫 조립 시점의" itemCount/onMove/onReorderFinished에 영원히 갇힌다 —
+    // 예를 들어 데이터가 아직 안 불러와져 목록이 비어있던 최초 조립 시점의 itemCount=0이
+    // 계속 쓰이면서 드래그할 때 크래시가 났다. rememberUpdatedState로 매번 최신 람다를
+    // 가리키게 해서 이 문제를 막는다.
+    val currentItemCount = rememberUpdatedState(itemCount)
+    val currentOnMove = rememberUpdatedState(onMove)
+    val currentOnReorderFinished = rememberUpdatedState(onReorderFinished)
+    return remember(listState) {
+        DragDropListState(
+            listState = listState,
+            scope = scope,
+            itemCount = { currentItemCount.value() },
+            onMove = { from, to -> currentOnMove.value(from, to) },
+            onReorderFinished = { currentOnReorderFinished.value() },
+        )
+    }
 }
 
 /** 이 Modifier가 붙은 뷰(보통 "≡" 손잡이 아이콘)를 롱프레스+드래그하면 [index] 항목이 움직인다. */
