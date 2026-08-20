@@ -37,6 +37,7 @@ class ReminderWorker(
                     ),
                     reminderLeadDays = status.item.reminderLeadDays,
                     lastNotifiedForDate = status.item.lastNotifiedForDate,
+                    lastNotifiedMilestoneDays = status.item.lastNotifiedMilestoneDays,
                 )
             }
 
@@ -52,7 +53,12 @@ class ReminderWorker(
                     contentText = contentText,
                 )
                 if (posted) {
-                    container.consumableItemRepository.save(status.item.copy(lastNotifiedForDate = target.nextDueDate))
+                    container.consumableItemRepository.save(
+                        status.item.copy(
+                            lastNotifiedForDate = target.nextDueDate,
+                            lastNotifiedMilestoneDays = target.milestoneDays,
+                        )
+                    )
                 }
             }
             return Result.success()

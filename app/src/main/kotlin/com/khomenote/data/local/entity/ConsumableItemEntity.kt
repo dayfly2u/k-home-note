@@ -28,6 +28,10 @@ data class ConsumableItemEntity(
     val reminderLeadDays: Int = 7,
     val memo: String? = null,
     val createdAt: LocalDate = LocalDate.now(),
+    // 알림은 reminderLeadDays를 절반씩 줄인 여러 시점(예: 14일 전 -> 14,7,3,1일 전)마다 온다.
+    // lastNotifiedForDate는 "그 알림들이 어느 교체 주기(다음 예정일)에 대한 것인지", lastNotifiedMilestoneDays는
+    // "그 주기 안에서 가장 최근에 보낸 시점(며칠 전)"을 기록해서 같은 시점에 중복 알림이 안 가게 한다.
     val lastNotifiedForDate: LocalDate? = null,
+    val lastNotifiedMilestoneDays: Int? = null,
     val sortOrder: Int = 0,
 )

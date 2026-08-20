@@ -38,3 +38,14 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `monthlyDueDay` INTEGER")
     }
 }
+
+/**
+ * consumable_items에 lastNotifiedMilestoneDays 컬럼만 추가하는 순수 추가형(additive) 마이그레이션.
+ * 알림을 여러 시점(14/7/3/1일 전 등)에 나눠 보내기 위해, 같은 교체 주기 안에서 가장 최근에
+ * 보낸 시점을 기록해 중복 알림을 막는 데 쓴다.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `lastNotifiedMilestoneDays` INTEGER")
+    }
+}
