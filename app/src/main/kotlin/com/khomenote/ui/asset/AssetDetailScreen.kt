@@ -3,6 +3,7 @@ package com.khomenote.ui.asset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +46,7 @@ import com.khomenote.data.local.entity.RepairRecordEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
+import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
@@ -170,6 +172,7 @@ fun AssetDetailScreen(
         if (dragState.draggingItemIndex == null) displayItems = uiState.items
     }
 
+    val repairListState = rememberLazyListState()
     var showRepairDialog by remember { mutableStateOf(false) }
     var editingRepairRecord by remember { mutableStateOf<RepairRecordEntity?>(null) }
     var pendingDeleteRepair by remember { mutableStateOf<RepairRecordEntity?>(null) }
@@ -258,50 +261,56 @@ fun AssetDetailScreen(
                     modifier = Modifier.padding(16.dp),
                 )
             } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.height(ITEM_ROW_HEIGHT * VISIBLE_ITEM_ROWS),
-                ) {
-                    itemsIndexed(displayItems, key = { _, item -> item.id }) { index, item ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .dragElevation(index, dragState)
-                                .clickable { onItemClick(item.id) }
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Row(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "≡",
-                                    modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row {
-                                        Text(item.name, fontWeight = FontWeight.Bold)
-                                        Text(
-                                            " (${formatCycle(item)})",
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                    if (!item.memo.isNullOrBlank()) {
-                                        Text(
-                                            item.memo,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.outline,
-                                        )
+                Box(modifier = Modifier.height(ITEM_ROW_HEIGHT * VISIBLE_ITEM_ROWS)) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        itemsIndexed(displayItems, key = { _, item -> item.id }) { index, item ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .dragElevation(index, dragState)
+                                    .clickable { onItemClick(item.id) }
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Row(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "≡",
+                                        modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row {
+                                            Text(item.name, fontWeight = FontWeight.Bold)
+                                            Text(
+                                                " (${formatCycle(item)})",
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                        if (!item.memo.isNullOrBlank()) {
+                                            Text(
+                                                item.memo,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.outline,
+                                            )
+                                        }
                                     }
                                 }
+                                Row {
+                                    TextButton(onClick = { onEditItem(item.id) }) { Text("수정") }
+                                    TextButton(onClick = { pendingDelete = item }) { Text("삭제") }
+                                }
                             }
-                            Row {
-                                TextButton(onClick = { onEditItem(item.id) }) { Text("수정") }
-                                TextButton(onClick = { pendingDelete = item }) { Text("삭제") }
-                            }
+                            HorizontalDivider()
                         }
-                        HorizontalDivider()
                     }
+                    MoreBelowIndicator(
+                        listState = listState,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+                    )
                 }
             }
 
@@ -328,30 +337,37 @@ fun AssetDetailScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             } else {
-                LazyColumn(
-                    modifier = Modifier.height(REPAIR_ROW_HEIGHT * VISIBLE_REPAIR_ROWS),
-                ) {
-                    items(uiState.repairRecords, key = { it.id }) { record ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("🔧 ${record.name}", fontWeight = FontWeight.Bold)
-                                val priceText = record.price?.let { "%,d원".format(it) }
-                                val infoLine = listOfNotNull(record.date.toString(), priceText).joinToString(" · ")
-                                Text(infoLine, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                                if (!record.memo.isNullOrBlank()) {
-                                    Text(record.memo, style = MaterialTheme.typography.bodySmall)
+                Box(modifier = Modifier.height(REPAIR_ROW_HEIGHT * VISIBLE_REPAIR_ROWS)) {
+                    LazyColumn(
+                        state = repairListState,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(uiState.repairRecords, key = { it.id }) { record ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("🔧 ${record.name}", fontWeight = FontWeight.Bold)
+                                    val priceText = record.price?.let { "%,d원".format(it) }
+                                    val infoLine = listOfNotNull(record.date.toString(), priceText).joinToString(" · ")
+                                    Text(infoLine, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    if (!record.memo.isNullOrBlank()) {
+                                        Text(record.memo, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                                Row {
+                                    TextButton(onClick = { editingRepairRecord = record }) { Text("수정") }
+                                    TextButton(onClick = { pendingDeleteRepair = record }) { Text("삭제") }
                                 }
                             }
-                            Row {
-                                TextButton(onClick = { editingRepairRecord = record }) { Text("수정") }
-                                TextButton(onClick = { pendingDeleteRepair = record }) { Text("삭제") }
-                            }
+                            HorizontalDivider()
                         }
-                        HorizontalDivider()
                     }
+                    MoreBelowIndicator(
+                        listState = repairListState,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+                    )
                 }
             }
         }

@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.CategoryRepository
+import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
@@ -137,38 +138,44 @@ fun CategoryManagementScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
-            LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
-                itemsIndexed(displayCategories, key = { _, category -> category.id }) { index, category ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .dragElevation(index, dragState)
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Row {
-                            Text(
-                                "≡",
-                                modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                            Text("${category.emoji} ${category.name}", fontWeight = FontWeight.Bold)
-                        }
-                        Row {
-                            TextButton(onClick = { editingTarget = category }) { Text("수정") }
-                            TextButton(onClick = {
-                                scope.launch {
-                                    if (viewModel.isInUse(category.id)) {
-                                        blockedDelete = category
-                                    } else {
-                                        viewModel.delete(category)
+            Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    itemsIndexed(displayCategories, key = { _, category -> category.id }) { index, category ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .dragElevation(index, dragState)
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row {
+                                Text(
+                                    "≡",
+                                    modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                                Text("${category.emoji} ${category.name}", fontWeight = FontWeight.Bold)
+                            }
+                            Row {
+                                TextButton(onClick = { editingTarget = category }) { Text("수정") }
+                                TextButton(onClick = {
+                                    scope.launch {
+                                        if (viewModel.isInUse(category.id)) {
+                                            blockedDelete = category
+                                        } else {
+                                            viewModel.delete(category)
+                                        }
                                     }
-                                }
-                            }) { Text("삭제") }
+                                }) { Text("삭제") }
+                            }
                         }
+                        HorizontalDivider()
                     }
-                    HorizontalDivider()
                 }
+                MoreBelowIndicator(
+                    listState = listState,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                )
             }
         }
     }

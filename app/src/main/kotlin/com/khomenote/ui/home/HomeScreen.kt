@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -50,6 +51,7 @@ import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.domain.DueDateCalculator
+import com.khomenote.ui.common.MoreBelowIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -142,6 +144,7 @@ fun HomeScreen(
         items.filter { categoryFilter == null || it.status.categoryId == categoryFilter }
     }
     val categoryById = remember(categories) { categories.associateBy { it.id } }
+    val listState = rememberLazyListState()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -240,45 +243,51 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(filteredItems, key = { it.status.item.id }) { uiModel ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .clickable { onItemClick(uiModel.status.item.id) }
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            val category = categoryById[uiModel.status.categoryId]
-                            if (category != null) {
+            Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    items(filteredItems, key = { it.status.item.id }) { uiModel ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable { onItemClick(uiModel.status.item.id) }
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                val category = categoryById[uiModel.status.categoryId]
+                                if (category != null) {
+                                    Text(
+                                        "${category.emoji} ${category.name}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
                                 Text(
-                                    "${category.emoji} ${category.name}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
+                                    "${uiModel.status.assetName} · ${uiModel.status.item.name}",
+                                    fontWeight = FontWeight.Bold,
                                 )
                             }
-                            Text(
-                                "${uiModel.status.assetName} · ${uiModel.status.item.name}",
-                                fontWeight = FontWeight.Bold,
-                            )
+                            val dStyle = dDayStyle(uiModel.daysUntilDue)
+                            Box(
+                                modifier = Modifier
+                                    .background(dStyle.background, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                Text(
+                                    dStyle.text,
+                                    color = dStyle.textColor,
+                                    fontWeight = FontWeight.Bold,
+                                    style = if (dStyle.large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyMedium,
+                                )
+                            }
                         }
-                        val dStyle = dDayStyle(uiModel.daysUntilDue)
-                        Box(
-                            modifier = Modifier
-                                .background(dStyle.background, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                        ) {
-                            Text(
-                                dStyle.text,
-                                color = dStyle.textColor,
-                                fontWeight = FontWeight.Bold,
-                                style = if (dStyle.large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyMedium,
-                            )
-                        }
+                        HorizontalDivider()
                     }
-                    HorizontalDivider()
                 }
+                MoreBelowIndicator(
+                    listState = listState,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                )
             }
         }
     }

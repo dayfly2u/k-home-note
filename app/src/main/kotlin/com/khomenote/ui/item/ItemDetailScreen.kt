@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -33,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -53,6 +56,7 @@ import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.photo.PhotoStorage
+import com.khomenote.ui.common.MoreBelowIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -157,6 +161,7 @@ fun ItemDetailScreen(
     var editingRecord by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
     var recordPendingDelete by remember { mutableStateOf<ReplacementRecordEntity?>(null) }
     var expandedPhotoPath by remember { mutableStateOf<String?>(null) }
+    val recordListState = rememberLazyListState()
     val status = uiState.status
 
     expandedPhotoPath?.let { path ->
@@ -269,35 +274,41 @@ fun ItemDetailScreen(
             if (uiState.records.isEmpty()) {
                 Text("아직 기록된 이력이 없습니다.", style = MaterialTheme.typography.bodySmall)
             }
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                items(uiState.records, key = { it.id }) { record ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Row(modifier = Modifier.weight(1f)) {
-                            if (record.photoUri != null) {
-                                LocalPhotoThumbnail(
-                                    path = record.photoUri,
-                                    modifier = Modifier.size(48.dp).clickable { expandedPhotoPath = record.photoUri },
-                                )
-                                Spacer(Modifier.width(8.dp))
+            Box(modifier = Modifier.weight(1f, fill = false)) {
+                LazyColumn(state = recordListState, modifier = Modifier.fillMaxWidth()) {
+                    items(uiState.records, key = { it.id }) { record ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(modifier = Modifier.weight(1f)) {
+                                if (record.photoUri != null) {
+                                    LocalPhotoThumbnail(
+                                        path = record.photoUri,
+                                        modifier = Modifier.size(48.dp).clickable { expandedPhotoPath = record.photoUri },
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                Column {
+                                    Text(record.date.toString(), fontWeight = FontWeight.Bold)
+                                    val priceText = record.price?.let { "%,d원".format(it) }
+                                    val infoLine = listOfNotNull(priceText, record.vendor).joinToString(" · ")
+                                    if (infoLine.isNotBlank()) Text(infoLine, style = MaterialTheme.typography.bodySmall)
+                                    if (!record.memo.isNullOrBlank()) Text(record.memo, style = MaterialTheme.typography.bodySmall)
+                                }
                             }
-                            Column {
-                                Text(record.date.toString(), fontWeight = FontWeight.Bold)
-                                val priceText = record.price?.let { "%,d원".format(it) }
-                                val infoLine = listOfNotNull(priceText, record.vendor).joinToString(" · ")
-                                if (infoLine.isNotBlank()) Text(infoLine, style = MaterialTheme.typography.bodySmall)
-                                if (!record.memo.isNullOrBlank()) Text(record.memo, style = MaterialTheme.typography.bodySmall)
+                            Row {
+                                TextButton(onClick = { editingRecord = record }) { Text("수정") }
+                                TextButton(onClick = { recordPendingDelete = record }) { Text("삭제") }
                             }
                         }
-                        Row {
-                            TextButton(onClick = { editingRecord = record }) { Text("수정") }
-                            TextButton(onClick = { recordPendingDelete = record }) { Text("삭제") }
-                        }
+                        HorizontalDivider()
                     }
-                    HorizontalDivider()
                 }
+                MoreBelowIndicator(
+                    listState = recordListState,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+                )
             }
         }
     }

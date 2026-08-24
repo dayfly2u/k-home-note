@@ -3,6 +3,7 @@ package com.khomenote.ui.asset
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,7 @@ import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
+import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
@@ -210,41 +213,47 @@ fun AssetListScreen(
                     modifier = Modifier.padding(16.dp),
                 )
             }
-            LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
-                itemsIndexed(visibleAssets, key = { _, asset -> asset.asset.id }) { index, asset ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .dragElevation(index, dragState)
-                            .clickable { onAssetClick(asset.asset.id) }
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Row {
-                            Text(
-                                "≡",
-                                modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                            Column {
-                                Text("${asset.categoryEmoji} ${asset.categoryName}")
-                                Text(asset.asset.name, fontWeight = FontWeight.Bold)
-                                if (!asset.asset.memo.isNullOrBlank()) {
-                                    Text(
-                                        asset.asset.memo,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                    )
+            Box(modifier = Modifier.weight(1f)) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    itemsIndexed(visibleAssets, key = { _, asset -> asset.asset.id }) { index, asset ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .dragElevation(index, dragState)
+                                .clickable { onAssetClick(asset.asset.id) }
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row {
+                                Text(
+                                    "≡",
+                                    modifier = Modifier.dragHandle(index, dragState).padding(end = 12.dp),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                                Column {
+                                    Text("${asset.categoryEmoji} ${asset.categoryName}")
+                                    Text(asset.asset.name, fontWeight = FontWeight.Bold)
+                                    if (!asset.asset.memo.isNullOrBlank()) {
+                                        Text(
+                                            asset.asset.memo,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                        )
+                                    }
                                 }
                             }
+                            Row {
+                                TextButton(onClick = { onEditAsset(asset.asset.id) }) { Text("수정") }
+                                TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
+                            }
                         }
-                        Row {
-                            TextButton(onClick = { onEditAsset(asset.asset.id) }) { Text("수정") }
-                            TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
-                        }
+                        HorizontalDivider()
                     }
-                    HorizontalDivider()
                 }
+                MoreBelowIndicator(
+                    listState = listState,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
+                )
             }
         }
     }
