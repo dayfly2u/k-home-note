@@ -117,15 +117,17 @@ class HomeViewModelFactory(
 
 private data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
 
-// 지난 날짜(연체)는 진한빨강 바탕에 흰 글자로 "D+N", 그 외는 남은 날짜에 따라
-// 10일 이하는 연한빨강, 31일 이하는 연한녹색, 그 외는 연한파랑 배지로 보여준다.
-// 급하지 않은 연한파랑 구간은 눈에 크게 띌 이유가 없어 폰트를 작게 둔다.
-private fun dDayStyle(daysUntilDue: Long): DDayStyle = when {
+// 지난 날짜(연체)는 진한빨강 바탕에 흰 글자로 "D+N". 그 외는 남은 날짜에 따라
+// 소모품별 알림 설정일(reminderLeadDays) 이내는 연한빨강, 30일 이하는 연한녹색,
+// 100일 이하는 연한파랑, 그보다 먼 날짜는 관심 밖이라 연한회색 배지로 보여준다.
+// 급하지 않은 연한파랑/회색 구간은 눈에 크게 띌 이유가 없어 폰트를 작게 둔다.
+private fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle = when {
     daysUntilDue < 0 -> DDayStyle("D+${-daysUntilDue}", Color(0xFFB71C1C), Color.White, large = true)
     daysUntilDue == 0L -> DDayStyle("오늘", Color(0xFFFFCDD2), Color(0xFFC62828), large = true)
-    daysUntilDue <= 10 -> DDayStyle("D-$daysUntilDue", Color(0xFFFFCDD2), Color(0xFFC62828), large = true)
+    daysUntilDue <= reminderLeadDays -> DDayStyle("D-$daysUntilDue", Color(0xFFFFCDD2), Color(0xFFC62828), large = true)
     daysUntilDue <= 31 -> DDayStyle("D-$daysUntilDue", Color(0xFFC8E6C9), Color(0xFF2E7D32), large = true)
-    else -> DDayStyle("D-$daysUntilDue", Color(0xFFBBDEFB), Color(0xFF1565C0), large = false)
+    daysUntilDue <= 100 -> DDayStyle("D-$daysUntilDue", Color(0xFFBBDEFB), Color(0xFF1565C0), large = false)
+    else -> DDayStyle("D-$daysUntilDue", Color(0xFFE0E0E0), Color(0xFF616161), large = false)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -267,7 +269,7 @@ fun HomeScreen(
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
-                            val dStyle = dDayStyle(uiModel.daysUntilDue)
+                            val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.status.item.reminderLeadDays)
                             Box(
                                 modifier = Modifier
                                     .background(dStyle.background, RoundedCornerShape(8.dp))
