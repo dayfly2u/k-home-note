@@ -241,6 +241,8 @@ fun ItemDetailScreen(
             cycleDays = status.item.cycleDays,
             latestRecordDate = status.latestRecordDate,
             monthlyDueDay = status.item.monthlyDueDay,
+            yearlyDueMonth = status.item.yearlyDueMonth,
+            yearlyDueDay = status.item.yearlyDueDay,
         )
         val daysUntilDue = DueDateCalculator.daysUntilDue(nextDueDate, LocalDate.now())
 
@@ -252,7 +254,9 @@ fun ItemDetailScreen(
                 Text("${status.assetName} · ${status.item.name}", fontWeight = FontWeight.Bold)
                 TextButton(onClick = { showRecordDialog = true }) { Text("구매이력 추가") }
             }
-            val cycleLabel = status.item.monthlyDueDay?.let { "매달 ${it}일" } ?: "${status.item.cycleDays}일"
+            val cycleLabel = status.item.monthlyDueDay?.let { "매달 ${it}일" }
+                ?: status.item.yearlyDueMonth?.let { m -> "매년 ${m}월 ${status.item.yearlyDueDay}일" }
+                ?: "${status.item.cycleDays}일"
             Text("주기: $cycleLabel / 알림: ${status.item.reminderLeadDays}일 전")
             Text(
                 "다음 예정일: $nextDueDate" + if (daysUntilDue <= 0) " (이미 지남)" else " (D-$daysUntilDue)",

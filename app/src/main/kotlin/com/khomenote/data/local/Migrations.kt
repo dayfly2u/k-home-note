@@ -49,3 +49,14 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `lastNotifiedMilestoneDays` INTEGER")
     }
 }
+
+/**
+ * consumable_items에 yearlyDueMonth/yearlyDueDay 컬럼을 추가하는 순수 추가형(additive) 마이그레이션.
+ * 생일/기념일처럼 "매년 이 날짜" 고정 주기를 위한 컬럼 — 둘 다 null이면 기존 방식(간격 또는 매달 고정) 그대로 동작한다.
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `yearlyDueMonth` INTEGER")
+        db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `yearlyDueDay` INTEGER")
+    }
+}

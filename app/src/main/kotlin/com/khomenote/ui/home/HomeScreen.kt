@@ -95,6 +95,8 @@ class HomeViewModel(
                     cycleDays = status.item.cycleDays,
                     latestRecordDate = status.latestRecordDate,
                     monthlyDueDay = status.item.monthlyDueDay,
+                    yearlyDueMonth = status.item.yearlyDueMonth,
+                    yearlyDueDay = status.item.yearlyDueDay,
                 )
                 HomeItemUiModel(
                     status = status,

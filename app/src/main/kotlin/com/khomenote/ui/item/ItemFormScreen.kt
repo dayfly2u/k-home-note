@@ -38,6 +38,7 @@ enum class CycleUnit(val days: Int, val label: String) {
 enum class CycleMode(val label: String) {
     INTERVAL("기간"),
     MONTHLY("매달 특정 날짜"),
+    YEARLY("매년 특정 날짜"),
 }
 
 class ItemFormViewModel(
@@ -54,6 +55,10 @@ class ItemFormViewModel(
     var cycleValueText by mutableStateOf("6")
         private set
     var monthlyDueDayText by mutableStateOf("1")
+        private set
+    var yearlyMonthText by mutableStateOf("1")
+        private set
+    var yearlyDayText by mutableStateOf("1")
         private set
     var reminderLeadDaysText by mutableStateOf("7")
         private set
@@ -73,6 +78,12 @@ class ItemFormViewModel(
     val monthlyDueDay: Int?
         get() = monthlyDueDayText.toIntOrNull()?.coerceIn(1, 31)
 
+    val yearlyMonth: Int?
+        get() = yearlyMonthText.toIntOrNull()?.coerceIn(1, 12)
+
+    val yearlyDay: Int?
+        get() = yearlyDayText.toIntOrNull()?.coerceIn(1, 31)
+
     init {
         if (itemId != null) {
             viewModelScope.launch {
@@ -81,6 +92,10 @@ class ItemFormViewModel(
                 if (item.monthlyDueDay != null) {
                     cycleMode = CycleMode.MONTHLY
                     monthlyDueDayText = item.monthlyDueDay.toString()
+                } else if (item.yearlyDueMonth != null) {
+                    cycleMode = CycleMode.YEARLY
+                    yearlyMonthText = item.yearlyDueMonth.toString()
+                    yearlyDayText = (item.yearlyDueDay ?: 1).toString()
                 } else {
                     cycleMode = CycleMode.INTERVAL
                     cycleUnit = CycleUnit.DAYS
@@ -100,12 +115,15 @@ class ItemFormViewModel(
     fun onCycleUnitChange(value: CycleUnit) { cycleUnit = value }
     fun onCycleValueChange(value: String) { cycleValueText = value.filter(Char::isDigit) }
     fun onMonthlyDueDayChange(value: String) { monthlyDueDayText = value.filter(Char::isDigit) }
+    fun onYearlyMonthChange(value: String) { yearlyMonthText = value.filter(Char::isDigit) }
+    fun onYearlyDayChange(value: String) { yearlyDayText = value.filter(Char::isDigit) }
     fun onReminderLeadDaysChange(value: String) { reminderLeadDaysText = value.filter(Char::isDigit) }
     fun onMemoChange(value: String) { memo = value }
 
     fun canSave(): Boolean = name.isNotBlank() && loadedAssetId != null && when (cycleMode) {
         CycleMode.INTERVAL -> cycleDays > 0
         CycleMode.MONTHLY -> monthlyDueDay != null
+        CycleMode.YEARLY -> yearlyMonth != null && yearlyDay != null
     }
 
     fun save(onDone: () -> Unit) {
@@ -119,9 +137,11 @@ class ItemFormViewModel(
                     id = itemId ?: 0,
                     assetId = assetId,
                     name = name,
-                    // 매달 고정 주기일 때는 cycleDays가 실제 계산에 쓰이지 않지만, NOT NULL 컬럼이라 30일로 채워둔다.
+                    // 매달/매년 고정 주기일 때는 cycleDays가 실제 계산에 쓰이지 않지만, NOT NULL 컬럼이라 30일로 채워둔다.
                     cycleDays = if (cycleMode == CycleMode.INTERVAL) cycleDays else 30,
                     monthlyDueDay = if (cycleMode == CycleMode.MONTHLY) monthlyDueDay else null,
+                    yearlyDueMonth = if (cycleMode == CycleMode.YEARLY) yearlyMonth else null,
+                    yearlyDueDay = if (cycleMode == CycleMode.YEARLY) yearlyDay else null,
                     reminderLeadDays = reminderLeadDaysText.toIntOrNull() ?: 7,
                     memo = memo.takeIf { it.isNotBlank() },
                     createdAt = loadedCreatedAt,
@@ -197,7 +217,7 @@ fun ItemFormScreen(
                         )
                     }
                 }
-            } else {
+            } else if (viewModel.cycleMode == CycleMode.MONTHLY) {
                 OutlinedTextField(
                     value = viewModel.monthlyDueDayText,
                     onValueChange = viewModel::onMonthlyDueDayChange,
@@ -206,6 +226,27 @@ fun ItemFormScreen(
                 )
                 Text(
                     "말일이 없는 달(예: 2월 30일)은 그 달의 마지막 날로 자동 조정돼요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                    OutlinedTextField(
+                        value = viewModel.yearlyMonthText,
+                        onValueChange = viewModel::onYearlyMonthChange,
+                        label = { Text("월 (1~12)") },
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = viewModel.yearlyDayText,
+                        onValueChange = viewModel::onYearlyDayChange,
+                        label = { Text("일 (1~31)") },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    "생일·기념일처럼 매년 돌아오는 날짜예요. 그 해에 없는 날짜(예: 2월 29일)는 그 달의 마지막 날로 자동 조정돼요.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(bottom = 12.dp),

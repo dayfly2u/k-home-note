@@ -68,12 +68,14 @@ val SECTION_TITLE_COLOR = Color(0xFFC8E6C9)
 val SECTION_TITLE_TEXT_COLOR = Color(0xFF2E7D32)
 
 /**
- * monthlyDueDay가 있으면 "매달 N일"로, 없으면 cycleDays를 "1yr 3m" 형태로 보여준다.
+ * monthlyDueDay가 있으면 "매달 N일"로, yearlyDueMonth/yearlyDueDay가 있으면 "매년 M월 D일"로,
+ * 그 외에는 cycleDays를 "1yr 3m" 형태로 보여준다.
  * cycleDays는 12개월 = 1년 기준으로 환산하고(달력 계산과 맞춤), 0인 단위는 생략한다.
  * 예: 15개월(450일) -> "1yr 3m", 6개월(180일) -> "6m".
  */
 private fun formatCycle(item: ConsumableItemEntity): String {
     item.monthlyDueDay?.let { return "매달 ${it}일" }
+    item.yearlyDueMonth?.let { month -> return "매년 ${month}월 ${item.yearlyDueDay}일" }
     val days = item.cycleDays
     val totalMonths = days / 30
     val remDays = days % 30
