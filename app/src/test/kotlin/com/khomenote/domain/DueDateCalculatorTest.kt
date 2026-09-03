@@ -27,6 +27,41 @@ class DueDateCalculatorTest {
     }
 
     @Test
+    fun `nextDueDate with monthly fixed day returns this month's date when no record exists yet and it is still ahead`() {
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 9, 3),
+            cycleDays = 30,
+            latestRecordDate = null,
+            monthlyDueDay = 25,
+        )
+        assertEquals(LocalDate.of(2026, 9, 25), result)
+    }
+
+    @Test
+    fun `nextDueDate with monthly fixed day advances to next month once a record exists, even if this month's date has not passed yet`() {
+        // 25일 결제일인데 20일에 미리 결제 기록을 남긴 경우 — 이번 달을 이미 처리한 것으로 보고
+        // 다음 달 25일로 넘어가야 한다("아직 지나지 않았어도 이력이 생기면 리셋").
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 1, 1),
+            cycleDays = 30,
+            latestRecordDate = LocalDate.of(2026, 9, 20),
+            monthlyDueDay = 25,
+        )
+        assertEquals(LocalDate.of(2026, 10, 25), result)
+    }
+
+    @Test
+    fun `nextDueDate with monthly fixed day still advances to next month when the record is after this month's date too`() {
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 1, 1),
+            cycleDays = 30,
+            latestRecordDate = LocalDate.of(2026, 9, 28),
+            monthlyDueDay = 25,
+        )
+        assertEquals(LocalDate.of(2026, 10, 25), result)
+    }
+
+    @Test
     fun `nextDueDate with yearly fixed date returns this year's date when it is still ahead`() {
         val result = DueDateCalculator.nextDueDate(
             itemCreatedAt = LocalDate.of(2027, 1, 1),
@@ -44,6 +79,18 @@ class DueDateCalculatorTest {
             itemCreatedAt = LocalDate.of(2027, 1, 1),
             cycleDays = 30,
             latestRecordDate = LocalDate.of(2027, 6, 1),
+            yearlyDueMonth = 5,
+            yearlyDueDay = 20,
+        )
+        assertEquals(LocalDate.of(2028, 5, 20), result)
+    }
+
+    @Test
+    fun `nextDueDate with yearly fixed date advances to next year once a record exists, even if this year's date has not passed yet`() {
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 1, 1),
+            cycleDays = 30,
+            latestRecordDate = LocalDate.of(2027, 3, 1),
             yearlyDueMonth = 5,
             yearlyDueDay = 20,
         )
