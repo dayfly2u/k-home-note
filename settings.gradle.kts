@@ -11,6 +11,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // usingsky/KoreanLunarCalendar (MIT) 배포용 — 음력 생일 지원에 사용.
+        maven(url = "https://jitpack.io")
     }
 }
 

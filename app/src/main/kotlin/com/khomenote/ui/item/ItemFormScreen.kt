@@ -60,6 +60,8 @@ class ItemFormViewModel(
         private set
     var yearlyDayText by mutableStateOf("1")
         private set
+    var yearlyIsLunar by mutableStateOf(false)
+        private set
     var reminderLeadDaysText by mutableStateOf("7")
         private set
     var memo by mutableStateOf("")
@@ -96,6 +98,7 @@ class ItemFormViewModel(
                     cycleMode = CycleMode.YEARLY
                     yearlyMonthText = item.yearlyDueMonth.toString()
                     yearlyDayText = (item.yearlyDueDay ?: 1).toString()
+                    yearlyIsLunar = item.isYearlyLunar == true
                 } else {
                     cycleMode = CycleMode.INTERVAL
                     cycleUnit = CycleUnit.DAYS
@@ -117,6 +120,7 @@ class ItemFormViewModel(
     fun onMonthlyDueDayChange(value: String) { monthlyDueDayText = value.filter(Char::isDigit) }
     fun onYearlyMonthChange(value: String) { yearlyMonthText = value.filter(Char::isDigit) }
     fun onYearlyDayChange(value: String) { yearlyDayText = value.filter(Char::isDigit) }
+    fun onYearlyIsLunarChange(value: Boolean) { yearlyIsLunar = value }
     fun onReminderLeadDaysChange(value: String) { reminderLeadDaysText = value.filter(Char::isDigit) }
     fun onMemoChange(value: String) { memo = value }
 
@@ -142,6 +146,7 @@ class ItemFormViewModel(
                     monthlyDueDay = if (cycleMode == CycleMode.MONTHLY) monthlyDueDay else null,
                     yearlyDueMonth = if (cycleMode == CycleMode.YEARLY) yearlyMonth else null,
                     yearlyDueDay = if (cycleMode == CycleMode.YEARLY) yearlyDay else null,
+                    isYearlyLunar = if (cycleMode == CycleMode.YEARLY) yearlyIsLunar else null,
                     reminderLeadDays = reminderLeadDaysText.toIntOrNull() ?: 7,
                     memo = memo.takeIf { it.isNotBlank() },
                     createdAt = loadedCreatedAt,
@@ -245,8 +250,24 @@ fun ItemFormScreen(
                         modifier = Modifier.weight(1f),
                     )
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                    FilterChip(
+                        selected = !viewModel.yearlyIsLunar,
+                        onClick = { viewModel.onYearlyIsLunarChange(false) },
+                        label = { Text("양력") },
+                    )
+                    FilterChip(
+                        selected = viewModel.yearlyIsLunar,
+                        onClick = { viewModel.onYearlyIsLunarChange(true) },
+                        label = { Text("음력") },
+                    )
+                }
                 Text(
-                    "생일·기념일처럼 매년 돌아오는 날짜예요. 그 해에 없는 날짜(예: 2월 29일)는 그 달의 마지막 날로 자동 조정돼요.",
+                    if (viewModel.yearlyIsLunar) {
+                        "음력 생일·제사처럼 매년 음력 날짜에 맞춰 그 해의 양력 날짜로 자동 환산돼요."
+                    } else {
+                        "생일·기념일처럼 매년 돌아오는 날짜예요. 그 해에 없는 날짜(예: 2월 29일)는 그 달의 마지막 날로 자동 조정돼요."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(bottom = 12.dp),

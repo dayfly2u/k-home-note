@@ -60,3 +60,13 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `yearlyDueDay` INTEGER")
     }
 }
+
+/**
+ * consumable_items에 isYearlyLunar 컬럼만 추가하는 순수 추가형(additive) 마이그레이션.
+ * "매년 특정 날짜"를 음력 기준으로 해석할지(생일/제사 등) 나타내는 플래그 — null/0이면 기존처럼 양력.
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `isYearlyLunar` INTEGER")
+    }
+}

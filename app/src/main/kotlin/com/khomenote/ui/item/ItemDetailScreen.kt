@@ -243,6 +243,7 @@ fun ItemDetailScreen(
             monthlyDueDay = status.item.monthlyDueDay,
             yearlyDueMonth = status.item.yearlyDueMonth,
             yearlyDueDay = status.item.yearlyDueDay,
+            yearlyDueIsLunar = status.item.isYearlyLunar == true,
         )
         val daysUntilDue = DueDateCalculator.daysUntilDue(nextDueDate, LocalDate.now())
 
@@ -255,7 +256,10 @@ fun ItemDetailScreen(
                 TextButton(onClick = { showRecordDialog = true }) { Text("구매이력 추가") }
             }
             val cycleLabel = status.item.monthlyDueDay?.let { "매달 ${it}일" }
-                ?: status.item.yearlyDueMonth?.let { m -> "매년 ${m}월 ${status.item.yearlyDueDay}일" }
+                ?: status.item.yearlyDueMonth?.let { m ->
+                    val lunarSuffix = if (status.item.isYearlyLunar == true) "(음력)" else ""
+                    "매년 ${m}월 ${status.item.yearlyDueDay}일$lunarSuffix"
+                }
                 ?: "${status.item.cycleDays}일"
             Text("주기: $cycleLabel / 알림: ${status.item.reminderLeadDays}일 전")
             Text(

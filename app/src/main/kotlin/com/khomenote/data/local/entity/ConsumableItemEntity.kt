@@ -29,6 +29,9 @@ data class ConsumableItemEntity(
     // 둘 다 값이 있을 땐 monthlyDueDay가 우선한다(DueDateCalculator 참고). 항상 둘 다 null이거나 둘 다 값이 있다.
     val yearlyDueMonth: Int? = null,
     val yearlyDueDay: Int? = null,
+    // true면 yearlyDueMonth/yearlyDueDay를 음력 월/일로 해석해서 매년 그에 해당하는 양력 날짜로 환산한다
+    // (생일/제사처럼 음력으로 챙기는 날짜용). null/false면 기존처럼 양력 월/일 그대로 쓴다.
+    val isYearlyLunar: Boolean? = null,
     val reminderLeadDays: Int = 7,
     val memo: String? = null,
     val createdAt: LocalDate = LocalDate.now(),

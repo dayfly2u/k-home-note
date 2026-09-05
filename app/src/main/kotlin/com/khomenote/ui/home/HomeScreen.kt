@@ -97,6 +97,7 @@ class HomeViewModel(
                     monthlyDueDay = status.item.monthlyDueDay,
                     yearlyDueMonth = status.item.yearlyDueMonth,
                     yearlyDueDay = status.item.yearlyDueDay,
+                    yearlyDueIsLunar = status.item.isYearlyLunar == true,
                 )
                 HomeItemUiModel(
                     status = status,

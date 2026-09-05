@@ -75,7 +75,10 @@ val SECTION_TITLE_TEXT_COLOR = Color(0xFF2E7D32)
  */
 private fun formatCycle(item: ConsumableItemEntity): String {
     item.monthlyDueDay?.let { return "매달 ${it}일" }
-    item.yearlyDueMonth?.let { month -> return "매년 ${month}월 ${item.yearlyDueDay}일" }
+    item.yearlyDueMonth?.let { month ->
+        val lunarSuffix = if (item.isYearlyLunar == true) "(음력)" else ""
+        return "매년 ${month}월 ${item.yearlyDueDay}일$lunarSuffix"
+    }
     val days = item.cycleDays
     val totalMonths = days / 30
     val remDays = days % 30

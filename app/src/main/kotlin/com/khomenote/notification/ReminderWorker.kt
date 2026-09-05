@@ -36,6 +36,7 @@ class ReminderWorker(
                         monthlyDueDay = status.item.monthlyDueDay,
                         yearlyDueMonth = status.item.yearlyDueMonth,
                         yearlyDueDay = status.item.yearlyDueDay,
+                        yearlyDueIsLunar = status.item.isYearlyLunar == true,
                     ),
                     reminderLeadDays = status.item.reminderLeadDays,
                     lastNotifiedForDate = status.item.lastNotifiedForDate,

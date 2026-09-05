@@ -1,8 +1,19 @@
 package com.khomenote.domain
 
+import com.github.usingsky.calendar.KoreanLunarCalendar
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+
+// 라이브러리 자체(음력<->양력 환산 정확성)를 다시 검증하는 게 아니라, DueDateCalculator가
+// forceNextPeriod/연도 탐색을 올바르게 배선했는지 확인하는 것이 목적이라, 기대값도
+// 같은 라이브러리로 직접 계산한다.
+private fun solarFor(lunarYear: Int, lunarMonth: Int, lunarDay: Int): LocalDate {
+    val calendar = KoreanLunarCalendar.getInstance()
+    check(calendar.setLunarDate(lunarYear, lunarMonth, lunarDay, false))
+    return LocalDate.of(calendar.solarYear, calendar.solarMonth, calendar.solarDay)
+}
 
 class DueDateCalculatorTest {
 
@@ -119,6 +130,73 @@ class DueDateCalculatorTest {
             yearlyDueDay = 29,
         )
         assertEquals(LocalDate.of(2028, 2, 29), result)
+    }
+
+    @Test
+    fun `nextDueDate with lunar yearly date returns this year's solar date when no record exists and it is still ahead`() {
+        // 음력 3월 15일을 아주 이른 base(그 해 1월 1일)에서 찾으면 아직 안 지났으니 올해 그대로.
+        val expected = solarFor(2027, 3, 15)
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2027, 1, 1),
+            cycleDays = 30,
+            latestRecordDate = null,
+            yearlyDueMonth = 3,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = true,
+        )
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `nextDueDate with lunar yearly date rolls over to next lunar year once this year's solar date has passed`() {
+        val thisYear = solarFor(2027, 3, 15)
+        val nextYear = solarFor(2028, 3, 15)
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2027, 1, 1),
+            cycleDays = 30,
+            latestRecordDate = thisYear.plusDays(1),
+            yearlyDueMonth = 3,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = true,
+        )
+        assertEquals(nextYear, result)
+    }
+
+    @Test
+    fun `nextDueDate with lunar yearly date advances to next lunar year once a record exists, even if this year's date has not passed yet`() {
+        val expected = solarFor(2028, 3, 15)
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 1, 1),
+            cycleDays = 30,
+            // 올해(2027) 음력 3월 15일의 훨씬 이전에 미리 이력을 남긴 경우.
+            latestRecordDate = LocalDate.of(2027, 1, 5),
+            yearlyDueMonth = 3,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = true,
+        )
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `nextDueDate with lunar yearly date differs from treating the same month day as solar`() {
+        // 음력과 양력을 같은 월/일로 착각해서 그냥 양력 계산 경로로 흘러들어가지 않는지 확인.
+        val lunarResult = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2027, 1, 1),
+            cycleDays = 30,
+            latestRecordDate = null,
+            yearlyDueMonth = 8,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = true,
+        )
+        val solarResult = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2027, 1, 1),
+            cycleDays = 30,
+            latestRecordDate = null,
+            yearlyDueMonth = 8,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = false,
+        )
+        assertTrue(lunarResult != solarResult)
     }
 
     @Test

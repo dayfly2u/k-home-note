@@ -13,7 +13,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 6
-        versionName = "0.5.0"
+        versionName = "0.5.1"
     }
 
     buildTypes {
@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.korean.lunar.calendar)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.junit)
 }
