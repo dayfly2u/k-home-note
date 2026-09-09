@@ -1,6 +1,7 @@
 package com.khomenote.ui.home
 
 import android.content.Intent
+import android.os.Process
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -160,8 +161,9 @@ fun HomeScreen(
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                withContext(Dispatchers.IO) { BackupManager.backup(context, uri) }
-                Toast.makeText(context, "백업이 완료되었습니다", Toast.LENGTH_SHORT).show()
+                runCatching { withContext(Dispatchers.IO) { BackupManager.backup(context, uri) } }
+                    .onSuccess { Toast.makeText(context, "백업이 완료되었습니다", Toast.LENGTH_SHORT).show() }
+                    .onFailure { Toast.makeText(context, "백업 실패: ${it.message}", Toast.LENGTH_LONG).show() }
             }
         }
     }
@@ -178,11 +180,16 @@ fun HomeScreen(
                 TextButton(onClick = {
                     pendingRestoreUri = null
                     scope.launch {
-                        withContext(Dispatchers.IO) { BackupManager.restore(context, uri) }
-                        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        context.startActivity(intent)
-                        Runtime.getRuntime().exit(0)
+                        runCatching { withContext(Dispatchers.IO) { BackupManager.restore(context, uri) } }
+                            .onSuccess {
+                                // 기존 리포지토리/DAO가 닫힌 연결을 들고 있으므로, 새로 뜨는 프로세스에서
+                                // 깨끗하게 다시 열리도록 앱을 재시작한다.
+                                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                                    ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
+                                if (intent != null) context.startActivity(intent)
+                                Process.killProcess(Process.myPid())
+                            }
+                            .onFailure { Toast.makeText(context, "복원 실패: ${it.message}", Toast.LENGTH_LONG).show() }
                     }
                 }) { Text("복원") }
             },
