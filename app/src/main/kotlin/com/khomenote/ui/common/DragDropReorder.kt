@@ -123,9 +123,12 @@ fun rememberDragDropListState(
     }
 }
 
-/** 이 Modifier가 붙은 뷰(보통 "≡" 손잡이 아이콘)를 롱프레스+드래그하면 [index] 항목이 움직인다. */
+/** 이 Modifier가 붙은 뷰(보통 "≡" 손잡이 아이콘)를 롱프레스+드래그하면 [index] 항목이 움직인다.
+ * pointerInput의 키에 [index]도 포함해야 한다 — dragDropListState만 키로 두면, 정렬로 이 항목의
+ * index가 바뀐 뒤에도 예전 index를 캡처한 낡은 제스처 블록이 그대로 남아있어서, 화면을 벗어나지
+ * 않고 같은 항목을 연달아 두 번 드래그하면 두 번째 드래그가 이미 지난 위치에서 시작해버린다. */
 fun Modifier.dragHandle(index: Int, dragDropListState: DragDropListState): Modifier =
-    this.pointerInput(dragDropListState) {
+    this.pointerInput(dragDropListState, index) {
         detectDragGesturesAfterLongPress(
             onDragStart = { dragDropListState.onDragStart(index) },
             onDrag = { change, dragAmount ->
