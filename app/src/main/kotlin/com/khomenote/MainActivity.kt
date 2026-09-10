@@ -14,12 +14,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.khomenote.di.AppContainer
 import com.khomenote.notification.consumeConsumableItemIdFromIntent
@@ -90,101 +95,120 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// 화면을 뒤로가기로 떠나도 viewModel()이 기본으로 잡는 액티비티 전역 스토어에 그 화면의
+// ViewModel이 절대 onCleared()되지 않고 계속 쌓인다 — golf-round-tracker에서 이게 실제
+// FK 위반 크래시로 이어진 적이 있다(지워진 항목의 Flow를 여전히 구독하던 낡은 ViewModel이
+// 되살아나 다시 write를 시도함). 화면 인스턴스별로 전용 ViewModelStore를 두고, 그 화면이
+// 백스택에서 pop되는 바로 그 지점에서 clear()해서 "화면이 사라지는 순간 == VM이 정리되는
+// 순간"을 보장한다. lightweight-navigation skill 참고.
+private class ScreenViewModelStoreOwner : ViewModelStoreOwner {
+    override val viewModelStore = ViewModelStore()
+}
+
 @Composable
 private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen>) {
     val current = backStack.last()
+    val viewModelStoreOwners = remember { java.util.IdentityHashMap<Screen, ScreenViewModelStoreOwner>() }
 
     fun push(screen: Screen) { backStack.add(screen) }
-    fun pop() { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
+    fun pop() {
+        if (backStack.size > 1) {
+            val removed = backStack.removeAt(backStack.lastIndex)
+            viewModelStoreOwners.remove(removed)?.viewModelStore?.clear()
+        }
+    }
 
     BackHandler(enabled = backStack.size > 1) { pop() }
 
-    when (val screen = current) {
-        is Screen.Home -> {
-            val vm = viewModel<HomeViewModel>(
-                factory = HomeViewModelFactory(container.consumableItemRepository, container.categoryRepository),
-            )
-            HomeScreen(
-                viewModel = vm,
-                onManageAssets = { push(Screen.AssetList) },
-                onManageCategories = { push(Screen.CategoryManagement) },
-                onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
-            )
-        }
+    val owner = viewModelStoreOwners.getOrPut(current) { ScreenViewModelStoreOwner() }
+    CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+        when (val screen = current) {
+            is Screen.Home -> {
+                val vm = viewModel<HomeViewModel>(
+                    factory = HomeViewModelFactory(container.consumableItemRepository, container.categoryRepository),
+                )
+                HomeScreen(
+                    viewModel = vm,
+                    onManageAssets = { push(Screen.AssetList) },
+                    onManageCategories = { push(Screen.CategoryManagement) },
+                    onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
+                )
+            }
 
-        is Screen.AssetList -> {
-            val vm = viewModel<AssetListViewModel>(
-                factory = AssetListViewModelFactory(
-                    container.assetRepository,
-                    container.consumableItemRepository,
-                    container.categoryRepository,
-                ),
-            )
-            AssetListScreen(
-                viewModel = vm,
-                onAddAsset = { push(Screen.AssetForm(null)) },
-                onAssetClick = { assetId -> push(Screen.AssetDetail(assetId)) },
-                onEditAsset = { assetId -> push(Screen.AssetForm(assetId)) },
-                onBack = { pop() },
-            )
-        }
+            is Screen.AssetList -> {
+                val vm = viewModel<AssetListViewModel>(
+                    factory = AssetListViewModelFactory(
+                        container.assetRepository,
+                        container.consumableItemRepository,
+                        container.categoryRepository,
+                    ),
+                )
+                AssetListScreen(
+                    viewModel = vm,
+                    onAddAsset = { push(Screen.AssetForm(null)) },
+                    onAssetClick = { assetId -> push(Screen.AssetDetail(assetId)) },
+                    onEditAsset = { assetId -> push(Screen.AssetForm(assetId)) },
+                    onBack = { pop() },
+                )
+            }
 
-        is Screen.CategoryManagement -> {
-            val vm = viewModel<CategoryManagementViewModel>(
-                factory = CategoryManagementViewModelFactory(container.categoryRepository),
-            )
-            CategoryManagementScreen(viewModel = vm, onBack = { pop() })
-        }
+            is Screen.CategoryManagement -> {
+                val vm = viewModel<CategoryManagementViewModel>(
+                    factory = CategoryManagementViewModelFactory(container.categoryRepository),
+                )
+                CategoryManagementScreen(viewModel = vm, onBack = { pop() })
+            }
 
-        is Screen.AssetForm -> {
-            val vm = viewModel<AssetFormViewModel>(
-                factory = AssetFormViewModelFactory(container.assetRepository, container.categoryRepository, screen.assetId),
-                key = "asset-form-${System.identityHashCode(screen)}",
-            )
-            AssetFormScreen(viewModel = vm, isNew = screen.assetId == null, onSaved = { pop() }, onBack = { pop() })
-        }
+            is Screen.AssetForm -> {
+                val vm = viewModel<AssetFormViewModel>(
+                    factory = AssetFormViewModelFactory(container.assetRepository, container.categoryRepository, screen.assetId),
+                    key = "asset-form-${System.identityHashCode(screen)}",
+                )
+                AssetFormScreen(viewModel = vm, isNew = screen.assetId == null, onSaved = { pop() }, onBack = { pop() })
+            }
 
-        is Screen.AssetDetail -> {
-            val vm = viewModel<AssetDetailViewModel>(
-                factory = AssetDetailViewModelFactory(
-                    container.assetRepository,
-                    container.consumableItemRepository,
-                    container.repairRecordRepository,
-                    screen.assetId,
-                ),
-                key = "asset-detail-${screen.assetId}",
-            )
-            AssetDetailScreen(
-                viewModel = vm,
-                onAddItem = { push(Screen.ItemForm(screen.assetId, null)) },
-                onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
-                onEditItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },
-                onBack = { pop() },
-            )
-        }
+            is Screen.AssetDetail -> {
+                val vm = viewModel<AssetDetailViewModel>(
+                    factory = AssetDetailViewModelFactory(
+                        container.assetRepository,
+                        container.consumableItemRepository,
+                        container.repairRecordRepository,
+                        screen.assetId,
+                    ),
+                    key = "asset-detail-${screen.assetId}",
+                )
+                AssetDetailScreen(
+                    viewModel = vm,
+                    onAddItem = { push(Screen.ItemForm(screen.assetId, null)) },
+                    onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
+                    onEditItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },
+                    onBack = { pop() },
+                )
+            }
 
-        is Screen.ItemForm -> {
-            val vm = viewModel<ItemFormViewModel>(
-                factory = ItemFormViewModelFactory(container.consumableItemRepository, screen.assetId, screen.itemId),
-                key = "item-form-${System.identityHashCode(screen)}",
-            )
-            ItemFormScreen(viewModel = vm, isNew = screen.itemId == null, onSaved = { pop() }, onBack = { pop() })
-        }
+            is Screen.ItemForm -> {
+                val vm = viewModel<ItemFormViewModel>(
+                    factory = ItemFormViewModelFactory(container.consumableItemRepository, screen.assetId, screen.itemId),
+                    key = "item-form-${System.identityHashCode(screen)}",
+                )
+                ItemFormScreen(viewModel = vm, isNew = screen.itemId == null, onSaved = { pop() }, onBack = { pop() })
+            }
 
-        is Screen.ItemDetail -> {
-            val vm = viewModel<ItemDetailViewModel>(
-                factory = ItemDetailViewModelFactory(
-                    container.consumableItemRepository,
-                    container.replacementRecordRepository,
-                    container.photoStorage,
-                    screen.itemId,
-                ),
-                key = "item-detail-${screen.itemId}",
-            )
-            ItemDetailScreen(
-                viewModel = vm,
-                onBack = { pop() },
-            )
+            is Screen.ItemDetail -> {
+                val vm = viewModel<ItemDetailViewModel>(
+                    factory = ItemDetailViewModelFactory(
+                        container.consumableItemRepository,
+                        container.replacementRecordRepository,
+                        container.photoStorage,
+                        screen.itemId,
+                    ),
+                    key = "item-detail-${screen.itemId}",
+                )
+                ItemDetailScreen(
+                    viewModel = vm,
+                    onBack = { pop() },
+                )
+            }
         }
     }
 }
