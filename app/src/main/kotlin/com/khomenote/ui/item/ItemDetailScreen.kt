@@ -154,6 +154,7 @@ class ItemDetailViewModelFactory(
 @Composable
 fun ItemDetailScreen(
     viewModel: ItemDetailViewModel,
+    onEditItem: () -> Unit,
     onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -221,6 +222,7 @@ fun ItemDetailScreen(
             TopAppBar(
                 title = { Text(status?.item?.name ?: "소모품") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
+                actions = { TextButton(onClick = onEditItem) { Text("수정") } },
             )
         },
     ) { padding ->
