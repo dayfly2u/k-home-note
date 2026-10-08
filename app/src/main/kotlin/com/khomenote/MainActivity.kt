@@ -28,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.khomenote.di.AppContainer
 import com.khomenote.notification.consumeConsumableItemIdFromIntent
+import com.khomenote.notification.consumeOneTimeTaskAssetIdFromIntent
 import com.khomenote.ui.asset.AssetDetailScreen
 import com.khomenote.ui.asset.AssetDetailViewModel
 import com.khomenote.ui.asset.AssetDetailViewModelFactory
@@ -78,6 +79,9 @@ class MainActivity : ComponentActivity() {
                         consumeConsumableItemIdFromIntent(intent)?.let { itemId ->
                             backStack.add(Screen.ItemDetail(itemId))
                         }
+                        consumeOneTimeTaskAssetIdFromIntent(intent)?.let { assetId ->
+                            backStack.add(Screen.AssetDetail(assetId))
+                        }
                     }
 
                     AppRoot(container = container, backStack = backStack)
@@ -91,6 +95,9 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         consumeConsumableItemIdFromIntent(intent)?.let { itemId ->
             backStack.add(Screen.ItemDetail(itemId))
+        }
+        consumeOneTimeTaskAssetIdFromIntent(intent)?.let { assetId ->
+            backStack.add(Screen.AssetDetail(assetId))
         }
     }
 }
@@ -125,13 +132,18 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
         when (val screen = current) {
             is Screen.Home -> {
                 val vm = viewModel<HomeViewModel>(
-                    factory = HomeViewModelFactory(container.consumableItemRepository, container.categoryRepository),
+                    factory = HomeViewModelFactory(
+                        container.consumableItemRepository,
+                        container.repairRecordRepository,
+                        container.categoryRepository,
+                    ),
                 )
                 HomeScreen(
                     viewModel = vm,
                     onManageAssets = { push(Screen.AssetList) },
                     onManageCategories = { push(Screen.CategoryManagement) },
                     onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
+                    onOneTimeTaskClick = { assetId -> push(Screen.AssetDetail(assetId)) },
                 )
             }
 

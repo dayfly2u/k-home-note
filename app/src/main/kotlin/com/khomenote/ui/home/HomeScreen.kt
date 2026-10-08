@@ -48,29 +48,58 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.backup.BackupManager
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
+import com.khomenote.data.local.dto.RepairRecordWithAsset
 import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
+import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.ui.common.MoreBelowIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-data class HomeItemUiModel(
-    val status: ConsumableItemWithStatus,
-    val nextDueDate: LocalDate,
-    val daysUntilDue: Long,
-)
+/** 홈 대시보드 한 줄 — 주기성작업(소모품)과 일회성작업(알림 받기를 켠 것만)을 한 목록에 합쳐서 보여준다. */
+sealed interface HomeRowUiModel {
+    val dueDate: LocalDate
+    val daysUntilDue: Long
+    val categoryId: Long
+    val assetName: String
+    val title: String
+    val reminderLeadDays: Int
+
+    data class Recurring(
+        val status: ConsumableItemWithStatus,
+        override val dueDate: LocalDate,
+        override val daysUntilDue: Long,
+    ) : HomeRowUiModel {
+        override val categoryId get() = status.categoryId
+        override val assetName get() = status.assetName
+        override val title get() = status.item.name
+        override val reminderLeadDays get() = status.item.reminderLeadDays
+    }
+
+    data class OneTime(
+        val record: RepairRecordWithAsset,
+        override val dueDate: LocalDate,
+        override val daysUntilDue: Long,
+    ) : HomeRowUiModel {
+        override val categoryId get() = record.categoryId
+        override val assetName get() = record.assetName
+        override val title get() = record.record.name
+        override val reminderLeadDays get() = record.record.reminderLeadDays ?: 0
+    }
+}
 
 class HomeViewModel(
     private val consumableItemRepository: ConsumableItemRepository,
+    private val repairRecordRepository: RepairRecordRepository,
     categoryRepository: CategoryRepository,
 ) : ViewModel() {
 
@@ -86,37 +115,48 @@ class HomeViewModel(
         _categoryFilter.value = categoryId
     }
 
-    // 정렬 기준이 nextDueDate 오름차순이라, 연체(과거 날짜) 항목이 자연히
+    // 정렬 기준이 dueDate 오름차순이라, 연체(과거 날짜) 항목이 자연히
     // 맨 앞에 온다 — 화면에서 별도로 "연체는 위로" 정렬 로직을 두지 않아도 된다.
-    val items: StateFlow<List<HomeItemUiModel>> = consumableItemRepository.getAllWithStatus()
-        .map { list ->
-            list.map { status ->
-                val nextDueDate = DueDateCalculator.nextDueDate(
-                    itemCreatedAt = status.item.createdAt,
-                    cycleDays = status.item.cycleDays,
-                    latestRecordDate = status.latestRecordDate,
-                    monthlyDueDay = status.item.monthlyDueDay,
-                    yearlyDueMonth = status.item.yearlyDueMonth,
-                    yearlyDueDay = status.item.yearlyDueDay,
-                    yearlyDueIsLunar = status.item.isYearlyLunar == true,
-                )
-                HomeItemUiModel(
-                    status = status,
-                    nextDueDate = nextDueDate,
-                    daysUntilDue = DueDateCalculator.daysUntilDue(nextDueDate, LocalDate.now()),
-                )
-            }.sortedBy { it.nextDueDate }
+    val items: StateFlow<List<HomeRowUiModel>> = combine(
+        consumableItemRepository.getAllWithStatus(),
+        repairRecordRepository.getPendingReminders(),
+    ) { statuses, oneTimeTasks ->
+        val today = LocalDate.now()
+        val recurring = statuses.map { status ->
+            val nextDueDate = DueDateCalculator.nextDueDate(
+                itemCreatedAt = status.item.createdAt,
+                cycleDays = status.item.cycleDays,
+                latestRecordDate = status.latestRecordDate,
+                monthlyDueDay = status.item.monthlyDueDay,
+                yearlyDueMonth = status.item.yearlyDueMonth,
+                yearlyDueDay = status.item.yearlyDueDay,
+                yearlyDueIsLunar = status.item.isYearlyLunar == true,
+            )
+            HomeRowUiModel.Recurring(
+                status = status,
+                dueDate = nextDueDate,
+                daysUntilDue = DueDateCalculator.daysUntilDue(nextDueDate, today),
+            )
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        val oneTime = oneTimeTasks.map { withAsset ->
+            HomeRowUiModel.OneTime(
+                record = withAsset,
+                dueDate = withAsset.record.date,
+                daysUntilDue = DueDateCalculator.daysUntilDue(withAsset.record.date, today),
+            )
+        }
+        (recurring + oneTime).sortedBy { it.dueDate }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }
 
 class HomeViewModelFactory(
     private val consumableItemRepository: ConsumableItemRepository,
+    private val repairRecordRepository: RepairRecordRepository,
     private val categoryRepository: CategoryRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        HomeViewModel(consumableItemRepository, categoryRepository) as T
+        HomeViewModel(consumableItemRepository, repairRecordRepository, categoryRepository) as T
 }
 
 private data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
@@ -141,13 +181,14 @@ fun HomeScreen(
     onManageAssets: () -> Unit,
     onManageCategories: () -> Unit,
     onItemClick: (Long) -> Unit,
+    onOneTimeTaskClick: (Long) -> Unit,
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
 
     val filteredItems = remember(items, categoryFilter) {
-        items.filter { categoryFilter == null || it.status.categoryId == categoryFilter }
+        items.filter { categoryFilter == null || it.categoryId == categoryFilter }
     }
     val categoryById = remember(categories) { categories.associateBy { it.id } }
     val listState = rememberLazyListState()
@@ -244,29 +285,45 @@ fun HomeScreen(
             }
             if (filteredItems.isEmpty()) {
                 Text(
-                    "등록된 소모품이 없습니다. \"자산 관리\"에서 자산과 소모품을 먼저 추가하세요.",
+                    "등록된 작업이 없습니다. \"자산 관리\"에서 자산과 주기성작업/일회성작업을 먼저 추가하세요.",
                     modifier = Modifier.padding(16.dp),
                 )
                 return@Scaffold
             }
             Text(
-                "교체주기순으로 정렬되어있습니다. 구매이력을 기록하려면 소모품이름을 누르세요.",
+                "예정일순으로 정렬되어있습니다. 연한노랑 바탕은 일회성작업이에요.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
             Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                    items(filteredItems, key = { it.status.item.id }) { uiModel ->
+                    items(
+                        filteredItems,
+                        key = {
+                            when (it) {
+                                is HomeRowUiModel.Recurring -> "recurring-${it.status.item.id}"
+                                is HomeRowUiModel.OneTime -> "onetime-${it.record.record.id}"
+                            }
+                        },
+                    ) { uiModel ->
                         Row(
                             modifier = Modifier.fillMaxWidth()
-                                .clickable { onItemClick(uiModel.status.item.id) }
+                                .let {
+                                    if (uiModel is HomeRowUiModel.OneTime) it.background(Color(0xFFFFF9C4)) else it
+                                }
+                                .clickable {
+                                    when (uiModel) {
+                                        is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
+                                        is HomeRowUiModel.OneTime -> onOneTimeTaskClick(uiModel.record.record.assetId)
+                                    }
+                                }
                                 .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                val category = categoryById[uiModel.status.categoryId]
+                                val category = categoryById[uiModel.categoryId]
                                 if (category != null) {
                                     Text(
                                         "${category.emoji} ${category.name}",
@@ -275,11 +332,11 @@ fun HomeScreen(
                                     )
                                 }
                                 Text(
-                                    "${uiModel.status.assetName} · ${uiModel.status.item.name}",
+                                    "${uiModel.assetName} · ${uiModel.title}",
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
-                            val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.status.item.reminderLeadDays)
+                            val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.reminderLeadDays)
                             Box(
                                 modifier = Modifier
                                     .background(dStyle.background, RoundedCornerShape(8.dp))

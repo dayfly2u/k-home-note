@@ -179,7 +179,7 @@ fun ItemFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isNew) "소모품 추가" else "소모품 수정") },
+                title = { Text(if (isNew) "주기성작업 추가" else "주기성작업 수정") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
                 actions = {
                     TextButton(

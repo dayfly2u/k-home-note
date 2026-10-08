@@ -70,3 +70,16 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         db.execSQL("ALTER TABLE `consumable_items` ADD COLUMN `isYearlyLunar` INTEGER")
     }
 }
+
+/**
+ * repair_records에 reminderLeadDays/lastNotifiedForDate/lastNotifiedMilestoneDays 컬럼을 추가하는
+ * 순수 추가형(additive) 마이그레이션. "일회성작업"에도 소모품과 동일한 방식의 알림을 지원하기 위한
+ * 컬럼 — reminderLeadDays가 null이면 기존처럼 그냥 기록(알림 대상 아님)으로 동작한다.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `repair_records` ADD COLUMN `reminderLeadDays` INTEGER")
+        db.execSQL("ALTER TABLE `repair_records` ADD COLUMN `lastNotifiedForDate` INTEGER")
+        db.execSQL("ALTER TABLE `repair_records` ADD COLUMN `lastNotifiedMilestoneDays` INTEGER")
+    }
+}

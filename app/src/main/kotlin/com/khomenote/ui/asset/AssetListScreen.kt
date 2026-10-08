@@ -167,7 +167,7 @@ fun AssetListScreen(
         AlertDialog(
             onDismissRequest = { blockedDelete = null },
             title = { Text("삭제할 수 없습니다") },
-            text = { Text("\"${asset.asset.name}\"에 등록된 소모품이 있습니다. 먼저 소모품을 모두 삭제한 뒤 다시 시도해주세요.") },
+            text = { Text("\"${asset.asset.name}\"에 등록된 주기성작업이 있습니다. 먼저 모두 삭제한 뒤 다시 시도해주세요.") },
             confirmButton = { TextButton(onClick = { blockedDelete = null }) { Text("확인") } },
         )
     }

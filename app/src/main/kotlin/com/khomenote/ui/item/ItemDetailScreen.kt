@@ -220,7 +220,7 @@ fun ItemDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(status?.item?.name ?: "소모품") },
+                title = { Text(status?.item?.name ?: "주기성작업") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
                 actions = { TextButton(onClick = onEditItem) { Text("수정") } },
             )

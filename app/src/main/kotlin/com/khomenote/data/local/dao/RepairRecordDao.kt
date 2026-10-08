@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import com.khomenote.data.local.dto.RepairRecordWithAsset
 import com.khomenote.data.local.entity.RepairRecordEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -21,4 +22,15 @@ interface RepairRecordDao {
 
     @Query("SELECT * FROM repair_records WHERE assetId = :assetId ORDER BY date DESC, id DESC")
     fun getByAsset(assetId: Long): Flow<List<RepairRecordEntity>>
+
+    // reminderLeadDays가 있는(알림 받기를 켜둔) 일회성작업만 — 대시보드/알림 대상.
+    @Query(
+        """
+        SELECT rr.*, a.name AS assetName, a.categoryId AS categoryId
+        FROM repair_records rr
+        INNER JOIN assets a ON a.id = rr.assetId
+        WHERE rr.reminderLeadDays IS NOT NULL
+        """
+    )
+    fun getPendingReminders(): Flow<List<RepairRecordWithAsset>>
 }

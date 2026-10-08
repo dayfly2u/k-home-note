@@ -39,8 +39,14 @@ class ReminderWorker(
 
     private suspend fun runReminderCheck() {
         val container = AppContainer.getInstance(applicationContext)
-        val itemsWithStatus = container.consumableItemRepository.getAllWithStatus().first()
         val today = LocalDate.now()
+
+        checkConsumableItems(container, today)
+        checkOneTimeTasks(container, today)
+    }
+
+    private suspend fun checkConsumableItems(container: AppContainer, today: LocalDate) {
+        val itemsWithStatus = container.consumableItemRepository.getAllWithStatus().first()
 
         val candidates = itemsWithStatus.map { status ->
             ReminderCandidate(
@@ -74,6 +80,44 @@ class ReminderWorker(
             if (posted) {
                 container.consumableItemRepository.save(
                     status.item.copy(
+                        lastNotifiedForDate = target.nextDueDate,
+                        lastNotifiedMilestoneDays = target.milestoneDays,
+                    )
+                )
+            }
+        }
+    }
+
+    // 일회성작업(repair_records)은 알림 받기를 켠 것만 대상 — 소모품과 달리 다음 주기로 안 넘어가고
+    // 날짜가 고정이라, DueDateCalculator 없이 record.date를 그대로 nextDueDate로 쓴다.
+    private suspend fun checkOneTimeTasks(container: AppContainer, today: LocalDate) {
+        val pending = container.repairRecordRepository.getPendingReminders().first()
+
+        val candidates = pending.map { withAsset ->
+            ReminderCandidate(
+                consumableItemId = withAsset.record.id,
+                nextDueDate = withAsset.record.date,
+                reminderLeadDays = withAsset.record.reminderLeadDays ?: 0,
+                lastNotifiedForDate = withAsset.record.lastNotifiedForDate,
+                lastNotifiedMilestoneDays = withAsset.record.lastNotifiedMilestoneDays,
+            )
+        }
+
+        val targets = ReminderTargetSelector.selectTargets(candidates, today)
+        targets.forEach { target ->
+            val withAsset = pending.first { it.record.id == target.consumableItemId }
+            val daysLeft = ChronoUnit.DAYS.between(today, target.nextDueDate)
+            val contentText = if (daysLeft <= 0) "오늘 예정된 일이에요" else "${daysLeft}일 후 예정된 일이에요"
+            val posted = showOneTimeTaskReminderNotification(
+                context = applicationContext,
+                repairRecordId = withAsset.record.id,
+                assetId = withAsset.record.assetId,
+                title = "${withAsset.assetName} · ${withAsset.record.name}",
+                contentText = contentText,
+            )
+            if (posted) {
+                container.repairRecordRepository.save(
+                    withAsset.record.copy(
                         lastNotifiedForDate = target.nextDueDate,
                         lastNotifiedMilestoneDays = target.milestoneDays,
                     )

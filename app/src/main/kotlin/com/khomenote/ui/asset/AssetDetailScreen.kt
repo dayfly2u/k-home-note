@@ -56,14 +56,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-// 소모품/정비이력 목록은 화면 높이를 서로 갉아먹지 않도록 각자 고정 높이로 두고
+// 주기성작업/일회성작업 목록은 화면 높이를 서로 갉아먹지 않도록 각자 고정 높이로 두고
 // (대략 4줄/3줄이 보이는 정도), 더 있으면 그 영역 안에서만 슬라이드해서 본다.
 private val ITEM_ROW_HEIGHT = 72.dp
 private val REPAIR_ROW_HEIGHT = 96.dp
 private const val VISIBLE_ITEM_ROWS = 5
 private const val VISIBLE_REPAIR_ROWS = 3
 
-// 소모품/정비이력 둘 다 같은 연한녹색 타이틀 바로 구간을 표시한다(구매/교체 이력 화면과도 통일).
+// 주기성작업/일회성작업 둘 다 같은 연한녹색 타이틀 바로 구간을 표시한다(구매/교체 이력 화면과도 통일).
 val SECTION_TITLE_COLOR = Color(0xFFC8E6C9)
 val SECTION_TITLE_TEXT_COLOR = Color(0xFF2E7D32)
 
@@ -129,6 +129,7 @@ class AssetDetailViewModel(
                     date = input.date,
                     price = input.price,
                     memo = input.memo,
+                    reminderLeadDays = input.reminderLeadDays,
                 )
             )
         }
@@ -185,7 +186,7 @@ fun AssetDetailScreen(
     pendingDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("소모품을 삭제할까요?") },
+            title = { Text("주기성작업을 삭제할까요?") },
             text = { Text("\"${item.name}\"과 교체 이력이 모두 삭제되며 되돌릴 수 없습니다.") },
             confirmButton = {
                 TextButton(onClick = {
@@ -222,7 +223,7 @@ fun AssetDetailScreen(
     pendingDeleteRepair?.let { target ->
         AlertDialog(
             onDismissRequest = { pendingDeleteRepair = null },
-            title = { Text("이 정비 이력을 삭제할까요?") },
+            title = { Text("이 일회성작업을 삭제할까요?") },
             text = { Text("삭제된 기록은 되돌릴 수 없습니다.") },
             confirmButton = {
                 TextButton(onClick = {
@@ -251,18 +252,18 @@ fun AssetDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "소모품",
+                    "주기성작업",
                     fontWeight = FontWeight.Bold,
                     color = SECTION_TITLE_TEXT_COLOR,
                     modifier = Modifier
                         .background(SECTION_TITLE_COLOR, RoundedCornerShape(4.dp))
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
-                TextButton(onClick = onAddItem) { Text("소모품 추가") }
+                TextButton(onClick = onAddItem) { Text("주기성작업 추가") }
             }
             if (displayItems.isEmpty()) {
                 Text(
-                    "등록된 소모품이 없습니다. \"소모품 추가\" 버튼을 눌러 추가하세요.",
+                    "등록된 주기성작업이 없습니다. \"주기성작업 추가\" 버튼을 눌러 추가하세요.",
                     modifier = Modifier.padding(16.dp),
                 )
             } else {
@@ -325,18 +326,18 @@ fun AssetDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "정비 이력",
+                    "일회성작업",
                     fontWeight = FontWeight.Bold,
                     color = SECTION_TITLE_TEXT_COLOR,
                     modifier = Modifier
                         .background(SECTION_TITLE_COLOR, RoundedCornerShape(4.dp))
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 )
-                TextButton(onClick = { showRepairDialog = true }) { Text("정비 이력 추가") }
+                TextButton(onClick = { showRepairDialog = true }) { Text("일회성작업 추가") }
             }
             if (uiState.repairRecords.isEmpty()) {
                 Text(
-                    "교체 주기와 무관하게 고친 내역은 \"정비 이력 추가\"로 남길 수 있어요.",
+                    "교체 주기 없이 한 번만 하는 일은 \"일회성작업 추가\"로 남길 수 있어요. 알림 받기를 켜면 예정일로 대시보드에도 표시돼요.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -359,6 +360,13 @@ fun AssetDetailScreen(
                                     Text(infoLine, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                                     if (!record.memo.isNullOrBlank()) {
                                         Text(record.memo, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    record.reminderLeadDays?.let { lead ->
+                                        Text(
+                                            "🔔 알림 받는 중 (${lead}일 전)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
                                     }
                                 }
                                 Row {
