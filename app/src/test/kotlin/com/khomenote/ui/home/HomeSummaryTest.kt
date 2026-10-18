@@ -3,6 +3,32 @@ package com.khomenote.ui.home
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+// HomeRowUiModel은 sealed interface라 테스트 소스셋에서 가짜 구현체를 만들 수 없다(다른 모듈 취급).
+// 그래서 개수 계산 로직은 DueBand 목록을 받는 internal 함수(toSummaryCounts)로 검증한다.
+class HomeSummaryCountsTest {
+
+    @Test
+    fun `toSummaryCounts counts each band separately`() {
+        val bands = listOf(
+            dueBandFor(-1, 7),   // OVERDUE
+            dueBandFor(0, 7),    // DUE_SOON
+            dueBandFor(5, 7),    // DUE_SOON
+            dueBandFor(20, 7),   // WITHIN_MONTH
+            dueBandFor(60, 7),   // WITHIN_3_MONTHS
+        )
+        val counts = bands.toSummaryCounts()
+        assertEquals(1, counts.overdue)
+        assertEquals(2, counts.dueSoon)
+        assertEquals(1, counts.withinMonth)
+    }
+
+    @Test
+    fun `summaryCounts is all zero for an empty list`() {
+        val counts = emptyList<HomeRowUiModel>().summaryCounts()
+        assertEquals(HomeSummaryCounts(0, 0, 0), counts)
+    }
+}
+
 class HomeSummaryTest {
 
     @Test

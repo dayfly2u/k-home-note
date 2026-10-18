@@ -20,3 +20,14 @@ fun dueBandFor(daysUntilDue: Long, reminderLeadDays: Int): DueBand = when {
     daysUntilDue <= 100 -> DueBand.WITHIN_3_MONTHS
     else -> DueBand.LATER
 }
+
+data class HomeSummaryCounts(val overdue: Int, val dueSoon: Int, val withinMonth: Int)
+
+fun List<HomeRowUiModel>.summaryCounts(): HomeSummaryCounts =
+    map { dueBandFor(it.daysUntilDue, it.reminderLeadDays) }.toSummaryCounts()
+
+internal fun List<DueBand>.toSummaryCounts(): HomeSummaryCounts = HomeSummaryCounts(
+    overdue = count { it == DueBand.OVERDUE },
+    dueSoon = count { it == DueBand.DUE_SOON },
+    withinMonth = count { it == DueBand.WITHIN_MONTH },
+)
