@@ -62,7 +62,6 @@ Expected: `libpenguin.so` 경고 외 크래시 로그 없음.
 
 Run:
 ```bash
-cd /c/github/k-home-note
 git add app/build.gradle.kts gradle/libs.versions.toml app/src/main/kotlin/com/khomenote/MainActivity.kt app/src/main/kotlin/com/khomenote/ui/theme/Theme.kt app/src/main/kotlin/com/khomenote/ui/home/HomeScreen.kt app/src/main/kotlin/com/khomenote/ui/settings/SettingsScreen.kt app/src/main/kotlin/com/khomenote/ui/navigation/Screen.kt app/src/main/kotlin/com/khomenote/ui/asset/AssetListScreen.kt app/src/main/res/font
 git commit -m "feat: 생활달력 리디자인 1단계 — 청록 테마·하단 탭·설정 화면 (v0.5.9)"
 git push origin master
@@ -172,7 +171,6 @@ Expected: PASS (7개 테스트 전부)
 - [ ] **Step 5: 커밋**
 
 ```bash
-cd /c/github/k-home-note
 git add app/src/main/kotlin/com/khomenote/ui/home/HomeSummary.kt app/src/test/kotlin/com/khomenote/ui/home/HomeSummaryTest.kt
 git commit -m "feat: D-day 구간 분류를 DueBand 공유 함수로 추출 (v0.6.0)"
 ```
@@ -237,7 +235,6 @@ Expected: `BUILD SUCCESSFUL`, 전체 테스트 PASS.
 - [ ] **Step 5: 커밋**
 
 ```bash
-cd /c/github/k-home-note
 git add app/src/main/kotlin/com/khomenote/ui/home/HomeScreen.kt app/src/test/kotlin/com/khomenote/ui/home/HomeSummaryTest.kt app/build.gradle.kts
 git commit -m "refactor: dDayStyle이 DueBand를 공유해서 배지 색과 섹션 분류 기준을 하나로 합침 (vX.Y.Z)"
 ```
@@ -324,7 +321,6 @@ Expected: PASS (2개)
 - [ ] **Step 5: 커밋**
 
 ```bash
-cd /c/github/k-home-note
 git add app/src/main/kotlin/com/khomenote/ui/home/HomeSummary.kt app/src/test/kotlin/com/khomenote/ui/home/HomeSummaryTest.kt
 git commit -m "feat: 홈 요약 3칸(지났어요/챙길 때/한 달 안) 개수 계산 추가 (vX.Y.Z)"
 ```
@@ -339,71 +335,74 @@ git commit -m "feat: 홈 요약 3칸(지났어요/챙길 때/한 달 안) 개수
 
 **Interfaces:**
 - Consumes: `List<HomeRowUiModel>`, `dueBandFor`.
-- Produces: `fun <T : HomeRowUiModel> List<T>.groupedBySection(): List<Pair<DueBand, List<T>>>` — 각 그룹 내부는 `dueDate` 오름차순 유지, 그룹 순서는 `DueBand.entries` 순서(지났어요→챙길 때→한 달 안→석 달 안→나중에), 항목이 없는 구간은 결과에서 빠진다. Task 8(리스트 렌더링)이 이 함수를 쓴다.
+- Produces: `fun <T : HomeRowUiModel> List<T>.groupedBySection(): List<Pair<DueBand, List<T>>>` — 각 그룹 내부는 `dueDate` 오름차순 유지, 그룹 순서는 `DueBand.entries` 순서(지났어요→챙길 때→한 달 안→석 달 안→나중에), 항목이 없는 구간은 결과에서 빠진다. Task 8(리스트 렌더링)이 이 함수를 쓴다. 내부적으로 `internal fun <T> List<Pair<DueBand, T>>.groupedByBand(): List<Pair<DueBand, List<T>>>`에 위임한다 — `HomeRowUiModel`은 `sealed interface`라 테스트 소스셋(별도 컴파일 모듈)에서 가짜 구현체를 만들 수 없으므로(Task 4에서 `FakeRow : HomeRowUiModel`이 컴파일 안 됐던 것과 같은 이유), `DueBand` 레벨의 순수 함수를 따로 빼서 그걸 직접 테스트한다. 이 패턴은 Task 4의 `toSummaryCounts()`와 동일하다.
 
 - [ ] **Step 1: 실패하는 테스트 작성**
 
 `HomeSummaryTest.kt`에 추가:
 ```kotlin
-class HomeGroupedBySectionTest {
+class HomeGroupedByBandTest {
 
     @Test
-    fun `groupedBySection orders groups overdue first and skips empty bands`() {
-        val overdue = FakeRow(LocalDate.now().minusDays(1), -1, 7)
-        val withinMonth = FakeRow(LocalDate.now().plusDays(20), 20, 7)
-        val rows = listOf(withinMonth, overdue) // 입력 순서가 뒤섞여 있어도
+    fun `groupedByBand orders groups by DueBand enum order and skips empty bands`() {
+        val input = listOf(DueBand.WITHIN_MONTH to "a", DueBand.OVERDUE to "b")
 
-        val grouped = rows.groupedBySection()
+        val grouped = input.groupedByBand()
 
         assertEquals(listOf(DueBand.OVERDUE, DueBand.WITHIN_MONTH), grouped.map { it.first })
-        assertEquals(listOf(overdue), grouped[0].second)
-        assertEquals(listOf(withinMonth), grouped[1].second)
+        assertEquals(listOf("b"), grouped[0].second)
+        assertEquals(listOf("a"), grouped[1].second)
     }
 
     @Test
-    fun `groupedBySection keeps dueDate ascending order within a group`() {
-        val later = FakeRow(LocalDate.now().plusDays(6), 6, 7)
-        val sooner = FakeRow(LocalDate.now().plusDays(1), 1, 7)
-        val grouped = listOf(later, sooner).groupedBySection()
+    fun `groupedByBand keeps insertion order within a group`() {
+        val input = listOf(DueBand.WITHIN_MONTH to "later", DueBand.WITHIN_MONTH to "sooner")
+
+        val grouped = input.groupedByBand()
 
         assertEquals(1, grouped.size)
-        assertEquals(listOf(sooner, later), grouped.first().second)
+        assertEquals(listOf("later", "sooner"), grouped.first().second)
     }
 
     @Test
-    fun `groupedBySection returns an empty list for an empty input`() {
-        assertEquals(emptyList<Pair<DueBand, List<HomeRowUiModel>>>(), emptyList<HomeRowUiModel>().groupedBySection())
+    fun `groupedByBand returns an empty list for an empty input`() {
+        assertEquals(emptyList<Pair<DueBand, List<String>>>(), emptyList<Pair<DueBand, String>>().groupedByBand())
     }
 }
 ```
 
 - [ ] **Step 2: 테스트 실패 확인**
 
-Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeGroupedBySectionTest"`
-Expected: FAIL — `groupedBySection`이 없어서 컴파일 에러.
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeGroupedByBandTest"`
+Expected: FAIL — `groupedByBand`가 없어서 컴파일 에러.
 
 - [ ] **Step 3: 최소 구현 작성**
 
 `HomeSummary.kt`에 추가:
 ```kotlin
-fun <T : HomeRowUiModel> List<T>.groupedBySection(): List<Pair<DueBand, List<T>>> {
-    val byBand = groupBy { dueBandFor(it.daysUntilDue, it.reminderLeadDays) }
+internal fun <T> List<Pair<DueBand, T>>.groupedByBand(): List<Pair<DueBand, List<T>>> {
+    val byBand = groupBy({ it.first }, { it.second })
     return DueBand.entries.mapNotNull { band ->
-        val items = byBand[band]?.sortedBy { it.dueDate } ?: return@mapNotNull null
+        val items = byBand[band] ?: return@mapNotNull null
         if (items.isEmpty()) null else band to items
     }
 }
+
+fun <T : HomeRowUiModel> List<T>.groupedBySection(): List<Pair<DueBand, List<T>>> =
+    sortedBy { it.dueDate }
+        .map { dueBandFor(it.daysUntilDue, it.reminderLeadDays) to it }
+        .groupedByBand()
 ```
+(`groupedBySection`을 호출하기 전에 전체를 `dueDate` 오름차순으로 먼저 정렬해두기 때문에, `groupBy`가 원래 순서를 보존하는 특성상 각 그룹 내부도 자연히 `dueDate` 오름차순이 된다 — 그룹별로 따로 정렬할 필요가 없다. `groupedBySection` 자체는 `groupedByBand`와 `dueBandFor`의 조합만으로 이뤄진 3줄짜리 위임이라 별도 테스트를 추가하지 않는다 — 이 두 조각이 이미 각자 테스트돼 있다.)
 
 - [ ] **Step 4: 테스트 통과 확인**
 
-Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeGroupedBySectionTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeGroupedByBandTest"`
 Expected: PASS (3개)
 
 - [ ] **Step 5: 커밋**
 
 ```bash
-cd /c/github/k-home-note
 git add app/src/main/kotlin/com/khomenote/ui/home/HomeSummary.kt app/src/test/kotlin/com/khomenote/ui/home/HomeSummaryTest.kt
 git commit -m "feat: 홈 목록을 D-day 구간별 섹션으로 그룹화하는 groupedBySection 추가 (vX.Y.Z)"
 ```
@@ -534,7 +533,6 @@ Expected: PASS (7개)
 - [ ] **Step 5: 커밋**
 
 ```bash
-cd /c/github/k-home-note
 git add app/src/main/kotlin/com/khomenote/ui/home/HomeSummary.kt app/src/test/kotlin/com/khomenote/ui/home/HomeSummaryTest.kt
 git commit -m "feat: 홈 목록 행 둘째 줄에 쓸 주기/일정 설명 문구 함수 추가 (vX.Y.Z)"
 ```
@@ -662,7 +660,6 @@ Run (PowerShell, force-stop 후 install -r):
 - [ ] **Step 6: 커밋**
 
 ```bash
-cd /c/github/k-home-note
 git add app/src/main/kotlin/com/khomenote/ui/home/HomeScreen.kt app/build.gradle.kts
 git commit -m "feat: 홈 화면에 청록 헤더 + 요약 3칸(지났어요/챙길 때/한 달 안) 추가 (vX.Y.Z)"
 ```
@@ -757,7 +754,6 @@ Expected: `BUILD SUCCESSFUL`
 - [ ] **Step 6: 커밋 + 푸시**
 
 ```bash
-cd /c/github/k-home-note
 git add app/src/main/kotlin/com/khomenote/ui/home/HomeScreen.kt app/build.gradle.kts
 git commit -m "feat: 홈 목록을 D-day 구간별 섹션으로 나누고 행 둘째 줄을 주기 설명으로 교체 (vX.Y.Z)"
 git push origin master
