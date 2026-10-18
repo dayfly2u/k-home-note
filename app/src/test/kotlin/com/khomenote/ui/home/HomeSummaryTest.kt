@@ -1,5 +1,8 @@
 package com.khomenote.ui.home
 
+import com.khomenote.data.local.entity.ConsumableItemEntity
+import com.khomenote.data.local.entity.RepairRecordEntity
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -109,5 +112,54 @@ class HomeGroupedByBandTest {
     @Test
     fun `groupedByBand returns an empty list for an empty input`() {
         assertEquals(emptyList<Pair<DueBand, List<String>>>(), emptyList<Pair<DueBand, String>>().groupedByBand())
+    }
+}
+
+class HomeSubtitleTest {
+
+    @Test
+    fun `formatRecurringSubtitle for monthly fixed day matches AssetDetailScreen wording`() {
+        val item = ConsumableItemEntity(assetId = 1, name = "카드값", cycleDays = 30, monthlyDueDay = 25)
+        assertEquals("매달 25일", formatRecurringSubtitle(item, latestRecordDate = null))
+    }
+
+    @Test
+    fun `formatRecurringSubtitle for yearly fixed day includes lunar suffix when set`() {
+        val item = ConsumableItemEntity(
+            assetId = 1, name = "생일", cycleDays = 30,
+            yearlyDueMonth = 11, yearlyDueDay = 14, isYearlyLunar = true,
+        )
+        assertEquals("매년 11월 14일(음력)", formatRecurringSubtitle(item, latestRecordDate = null))
+    }
+
+    @Test
+    fun `formatRecurringSubtitle for interval mode shows the cycle in Korean units`() {
+        val item = ConsumableItemEntity(assetId = 1, name = "엔진오일", cycleDays = 180)
+        assertEquals("6개월마다", formatRecurringSubtitle(item, latestRecordDate = null))
+    }
+
+    @Test
+    fun `formatRecurringSubtitle for interval mode appends the last done date when it exists`() {
+        val item = ConsumableItemEntity(assetId = 1, name = "엔진오일", cycleDays = 180)
+        val result = formatRecurringSubtitle(item, latestRecordDate = LocalDate.of(2026, 4, 30))
+        assertEquals("6개월마다 · 지난번 4월 30일", result)
+    }
+
+    @Test
+    fun `formatRecurringSubtitle for an interval that does not divide evenly falls back to days`() {
+        val item = ConsumableItemEntity(assetId = 1, name = "소모품", cycleDays = 40)
+        assertEquals("40일마다", formatRecurringSubtitle(item, latestRecordDate = null))
+    }
+
+    @Test
+    fun `formatOneTimeSubtitle shows the date and a memo preview`() {
+        val record = RepairRecordEntity(assetId = 1, name = "보일러 점검", date = LocalDate.of(2026, 10, 20), memo = "전 담당자에게 확인")
+        assertEquals("10월 20일 · 전 담당자에게 확인", formatOneTimeSubtitle(record))
+    }
+
+    @Test
+    fun `formatOneTimeSubtitle shows only the date when there is no memo`() {
+        val record = RepairRecordEntity(assetId = 1, name = "보일러 점검", date = LocalDate.of(2026, 10, 20))
+        assertEquals("10월 20일", formatOneTimeSubtitle(record))
     }
 }
