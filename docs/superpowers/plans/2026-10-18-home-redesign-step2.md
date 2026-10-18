@@ -604,7 +604,13 @@ private fun HomeSummaryTile(label: String, count: Int, showDot: Boolean = false)
                 )
                 Spacer(Modifier.width(4.dp))
             }
-            Text("$count", style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                "$count",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontFamily = com.khomenote.ui.theme.NumberFontFamily,
+            )
         }
         Text(label, style = MaterialTheme.typography.labelSmall, color = TealHeaderMuted)
     }
