@@ -161,13 +161,15 @@ private data class DDayStyle(val text: String, val background: Color, val textCo
 // 지난 날짜(연체)는 주황 바탕에 흰 글자로 "D+N". 그 외는 남은 날짜에 따라 소모품별 알림 설정일
 // (reminderLeadDays) 이내는 연한주황, 31일 이하는 연한청록, 100일 이하/그 뒤는 바탕 없이 보조 글자색만
 // 두 단계로 흐리게 — 급하지 않은 구간은 눈에 크게 띌 이유가 없어 폰트를 작게 둔다.
-private fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle = when {
-    daysUntilDue < 0 -> DDayStyle("D+${-daysUntilDue}", OrangeUrgent, Color.White, large = true)
-    daysUntilDue == 0L -> DDayStyle("오늘", OrangeUrgentContainer, OrangeUrgentText, large = true)
-    daysUntilDue <= reminderLeadDays -> DDayStyle("D-$daysUntilDue", OrangeUrgentContainer, OrangeUrgentText, large = true)
-    daysUntilDue <= 31 -> DDayStyle("D-$daysUntilDue", TealContainer, TealPrimary, large = true)
-    daysUntilDue <= 100 -> DDayStyle("D-$daysUntilDue", Color.Transparent, TextSecondary, large = false)
-    else -> DDayStyle("D-$daysUntilDue", Color.Transparent, TextFaint, large = false)
+private fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle {
+    val overdueText = if (daysUntilDue == 0L) "오늘" else "D-$daysUntilDue"
+    return when (dueBandFor(daysUntilDue, reminderLeadDays)) {
+        DueBand.OVERDUE -> DDayStyle("D+${-daysUntilDue}", OrangeUrgent, Color.White, large = true)
+        DueBand.DUE_SOON -> DDayStyle(overdueText, OrangeUrgentContainer, OrangeUrgentText, large = true)
+        DueBand.WITHIN_MONTH -> DDayStyle("D-$daysUntilDue", TealContainer, TealPrimary, large = true)
+        DueBand.WITHIN_3_MONTHS -> DDayStyle("D-$daysUntilDue", Color.Transparent, TextSecondary, large = false)
+        DueBand.LATER -> DDayStyle("D-$daysUntilDue", Color.Transparent, TextFaint, large = false)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

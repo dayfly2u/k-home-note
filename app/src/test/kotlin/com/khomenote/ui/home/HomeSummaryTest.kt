@@ -42,4 +42,17 @@ class HomeSummaryTest {
         // 소모품의 reminderLeadDays가 31보다 크면(예: 40일 전 알림), DUE_SOON이 WITHIN_MONTH보다 먼저 와야 한다.
         assertEquals(DueBand.DUE_SOON, dueBandFor(daysUntilDue = 40, reminderLeadDays = 40))
     }
+
+    @Test
+    fun `dueBandFor boundary matches the previously hardcoded dDayStyle thresholds`() {
+        // HomeScreen.dDayStyle이 이 경계값들로 색을 나눴던 것과 정확히 같아야 한다(v0.4.12 이후 그대로).
+        assertEquals(DueBand.OVERDUE, dueBandFor(-1, 7))
+        assertEquals(DueBand.DUE_SOON, dueBandFor(0, 7))
+        assertEquals(DueBand.DUE_SOON, dueBandFor(7, 7))
+        assertEquals(DueBand.WITHIN_MONTH, dueBandFor(8, 7))
+        assertEquals(DueBand.WITHIN_MONTH, dueBandFor(31, 0))
+        assertEquals(DueBand.WITHIN_3_MONTHS, dueBandFor(32, 0))
+        assertEquals(DueBand.WITHIN_3_MONTHS, dueBandFor(100, 0))
+        assertEquals(DueBand.LATER, dueBandFor(101, 0))
+    }
 }
