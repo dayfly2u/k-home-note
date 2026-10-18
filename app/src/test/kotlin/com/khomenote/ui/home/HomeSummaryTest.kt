@@ -82,3 +82,32 @@ class HomeSummaryTest {
         assertEquals(DueBand.LATER, dueBandFor(101, 0))
     }
 }
+
+class HomeGroupedByBandTest {
+
+    @Test
+    fun `groupedByBand orders groups by DueBand enum order and skips empty bands`() {
+        val input = listOf(DueBand.WITHIN_MONTH to "a", DueBand.OVERDUE to "b")
+
+        val grouped = input.groupedByBand()
+
+        assertEquals(listOf(DueBand.OVERDUE, DueBand.WITHIN_MONTH), grouped.map { it.first })
+        assertEquals(listOf("b"), grouped[0].second)
+        assertEquals(listOf("a"), grouped[1].second)
+    }
+
+    @Test
+    fun `groupedByBand keeps insertion order within a group`() {
+        val input = listOf(DueBand.WITHIN_MONTH to "later", DueBand.WITHIN_MONTH to "sooner")
+
+        val grouped = input.groupedByBand()
+
+        assertEquals(1, grouped.size)
+        assertEquals(listOf("later", "sooner"), grouped.first().second)
+    }
+
+    @Test
+    fun `groupedByBand returns an empty list for an empty input`() {
+        assertEquals(emptyList<Pair<DueBand, List<String>>>(), emptyList<Pair<DueBand, String>>().groupedByBand())
+    }
+}

@@ -31,3 +31,16 @@ internal fun List<DueBand>.toSummaryCounts(): HomeSummaryCounts = HomeSummaryCou
     dueSoon = count { it == DueBand.DUE_SOON },
     withinMonth = count { it == DueBand.WITHIN_MONTH },
 )
+
+internal fun <T> List<Pair<DueBand, T>>.groupedByBand(): List<Pair<DueBand, List<T>>> {
+    val byBand = groupBy({ it.first }, { it.second })
+    return DueBand.entries.mapNotNull { band ->
+        val items = byBand[band] ?: return@mapNotNull null
+        if (items.isEmpty()) null else band to items
+    }
+}
+
+fun <T : HomeRowUiModel> List<T>.groupedBySection(): List<Pair<DueBand, List<T>>> =
+    sortedBy { it.dueDate }
+        .map { dueBandFor(it.daysUntilDue, it.reminderLeadDays) to it }
+        .groupedByBand()
