@@ -4,6 +4,7 @@ package com.khomenote.ui.navigation
 sealed interface Screen {
     data object Home : Screen
     data object AssetList : Screen
+    data object Settings : Screen
     data object CategoryManagement : Screen
     data class AssetForm(val assetId: Long?) : Screen
     data class AssetDetail(val assetId: Long) : Screen

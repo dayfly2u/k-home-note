@@ -102,7 +102,6 @@ fun AssetListScreen(
     onAddAsset: () -> Unit,
     onAssetClick: (Long) -> Unit,
     onEditAsset: (Long) -> Unit,
-    onBack: () -> Unit,
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
@@ -175,8 +174,7 @@ fun AssetListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("자산 관리") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
+                title = { Text("모아보기") },
                 actions = { TextButton(onClick = onAddAsset) { Text("자산 추가") } },
             )
         },

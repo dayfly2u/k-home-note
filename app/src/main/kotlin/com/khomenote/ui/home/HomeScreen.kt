@@ -1,52 +1,42 @@
 package com.khomenote.ui.home
 
-import android.content.Intent
-import android.os.Process
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.khomenote.backup.BackupManager
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.dto.RepairRecordWithAsset
 import com.khomenote.data.local.entity.CategoryEntity
@@ -55,14 +45,19 @@ import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.ui.common.MoreBelowIndicator
-import kotlinx.coroutines.Dispatchers
+import com.khomenote.ui.theme.OnceTagBorder
+import com.khomenote.ui.theme.OrangeUrgent
+import com.khomenote.ui.theme.OrangeUrgentContainer
+import com.khomenote.ui.theme.OrangeUrgentText
+import com.khomenote.ui.theme.TealContainer
+import com.khomenote.ui.theme.TealPrimary
+import com.khomenote.ui.theme.TextFaint
+import com.khomenote.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 /** 홈 대시보드 한 줄 — 주기성작업(소모품)과 일회성작업(알림 받기를 켠 것만)을 한 목록에 합쳐서 보여준다. */
@@ -161,25 +156,23 @@ class HomeViewModelFactory(
 
 private data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
 
-// 지난 날짜(연체)는 진한빨강 바탕에 흰 글자로 "D+N". 그 외는 남은 날짜에 따라
-// 소모품별 알림 설정일(reminderLeadDays) 이내는 연한빨강, 30일 이하는 연한녹색,
-// 100일 이하는 연한파랑, 그보다 먼 날짜는 관심 밖이라 연한회색 배지로 보여준다.
-// 급하지 않은 연한파랑/회색 구간은 눈에 크게 띌 이유가 없어 폰트를 작게 둔다.
+// 생활달력 리디자인(2026-10-18 redesign-brief.md 1장): 색을 청록 한 가지 + 급한 것만 주황으로 줄였다.
+// 지난 날짜(연체)는 주황 바탕에 흰 글자로 "D+N". 그 외는 남은 날짜에 따라 소모품별 알림 설정일
+// (reminderLeadDays) 이내는 연한주황, 31일 이하는 연한청록, 100일 이하/그 뒤는 바탕 없이 보조 글자색만
+// 두 단계로 흐리게 — 급하지 않은 구간은 눈에 크게 띌 이유가 없어 폰트를 작게 둔다.
 private fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle = when {
-    daysUntilDue < 0 -> DDayStyle("D+${-daysUntilDue}", Color(0xFFB71C1C), Color.White, large = true)
-    daysUntilDue == 0L -> DDayStyle("오늘", Color(0xFFFFCDD2), Color(0xFFC62828), large = true)
-    daysUntilDue <= reminderLeadDays -> DDayStyle("D-$daysUntilDue", Color(0xFFFFCDD2), Color(0xFFC62828), large = true)
-    daysUntilDue <= 31 -> DDayStyle("D-$daysUntilDue", Color(0xFFC8E6C9), Color(0xFF2E7D32), large = true)
-    daysUntilDue <= 100 -> DDayStyle("D-$daysUntilDue", Color(0xFFBBDEFB), Color(0xFF1565C0), large = false)
-    else -> DDayStyle("D-$daysUntilDue", Color(0xFFE0E0E0), Color(0xFF616161), large = false)
+    daysUntilDue < 0 -> DDayStyle("D+${-daysUntilDue}", OrangeUrgent, Color.White, large = true)
+    daysUntilDue == 0L -> DDayStyle("오늘", OrangeUrgentContainer, OrangeUrgentText, large = true)
+    daysUntilDue <= reminderLeadDays -> DDayStyle("D-$daysUntilDue", OrangeUrgentContainer, OrangeUrgentText, large = true)
+    daysUntilDue <= 31 -> DDayStyle("D-$daysUntilDue", TealContainer, TealPrimary, large = true)
+    daysUntilDue <= 100 -> DDayStyle("D-$daysUntilDue", Color.Transparent, TextSecondary, large = false)
+    else -> DDayStyle("D-$daysUntilDue", Color.Transparent, TextFaint, large = false)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onManageAssets: () -> Unit,
-    onManageCategories: () -> Unit,
     onItemClick: (Long) -> Unit,
     onOneTimeTaskClick: (Long) -> Unit,
 ) {
@@ -193,75 +186,9 @@ fun HomeScreen(
     val categoryById = remember(categories) { categories.associateBy { it.id } }
     val listState = rememberLazyListState()
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
-
-    val backupLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/octet-stream"),
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                runCatching { withContext(Dispatchers.IO) { BackupManager.backup(context, uri) } }
-                    .onSuccess { Toast.makeText(context, "백업이 완료되었습니다", Toast.LENGTH_SHORT).show() }
-                    .onFailure { Toast.makeText(context, "백업 실패: ${it.message}", Toast.LENGTH_LONG).show() }
-            }
-        }
-    }
-    val restoreLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri -> if (uri != null) pendingRestoreUri = uri }
-
-    pendingRestoreUri?.let { uri ->
-        AlertDialog(
-            onDismissRequest = { pendingRestoreUri = null },
-            title = { Text("백업 파일로 복원할까요?") },
-            text = { Text("현재 저장된 모든 데이터가 백업 시점 상태로 교체됩니다. 되돌릴 수 없고, 사진 파일은 복원되지 않습니다. 복원 후 앱이 다시 시작됩니다.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingRestoreUri = null
-                    scope.launch {
-                        runCatching { withContext(Dispatchers.IO) { BackupManager.restore(context, uri) } }
-                            .onSuccess {
-                                // 기존 리포지토리/DAO가 닫힌 연결을 들고 있으므로, 새로 뜨는 프로세스에서
-                                // 깨끗하게 다시 열리도록 앱을 재시작한다.
-                                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                                    ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
-                                if (intent != null) context.startActivity(intent)
-                                Process.killProcess(Process.myPid())
-                            }
-                            .onFailure { Toast.makeText(context, "복원 실패: ${it.message}", Toast.LENGTH_LONG).show() }
-                    }
-                }) { Text("복원") }
-            },
-            dismissButton = { TextButton(onClick = { pendingRestoreUri = null }) { Text("취소") } },
-        )
-    }
-
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("K-Home-Note") },
-                actions = {
-                    TextButton(onClick = onManageAssets) { Text("자산 관리") }
-                    TextButton(onClick = onManageCategories) { Text("카테고리 관리") }
-                },
-            )
-        },
-        bottomBar = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                TextButton(
-                    onClick = { backupLauncher.launch(BackupManager.backupFileName()) },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
-                ) { Text("백업", style = MaterialTheme.typography.bodySmall) }
-                TextButton(
-                    onClick = { restoreLauncher.launch(arrayOf("*/*")) },
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
-                ) { Text("복원", style = MaterialTheme.typography.bodySmall) }
-            }
+            TopAppBar(title = { Text("K-Home-Note") })
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -285,13 +212,13 @@ fun HomeScreen(
             }
             if (filteredItems.isEmpty()) {
                 Text(
-                    "등록된 작업이 없습니다. \"자산 관리\"에서 자산과 주기성작업/일회성작업을 먼저 추가하세요.",
+                    "등록된 작업이 없습니다. \"모아보기\"에서 자산과 주기성작업/일회성작업을 먼저 추가하세요.",
                     modifier = Modifier.padding(16.dp),
                 )
                 return@Scaffold
             }
             Text(
-                "예정일순으로 정렬되어있습니다. 연한노랑 바탕은 일회성작업이에요.",
+                "예정일순으로 정렬되어있습니다. \"한 번\" 표시는 일회성작업이에요.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -309,9 +236,6 @@ fun HomeScreen(
                     ) { uiModel ->
                         Row(
                             modifier = Modifier.fillMaxWidth()
-                                .let {
-                                    if (uiModel is HomeRowUiModel.OneTime) it.background(Color(0xFFFFF9C4)) else it
-                                }
                                 .clickable {
                                     when (uiModel) {
                                         is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
@@ -331,10 +255,23 @@ fun HomeScreen(
                                         color = MaterialTheme.colorScheme.outline,
                                     )
                                 }
-                                Text(
-                                    "${uiModel.assetName} · ${uiModel.title}",
-                                    fontWeight = FontWeight.Bold,
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "${uiModel.assetName} · ${uiModel.title}",
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    if (uiModel is HomeRowUiModel.OneTime) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "한 번",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TealPrimary,
+                                            modifier = Modifier
+                                                .border(1.dp, OnceTagBorder, RoundedCornerShape(999.dp))
+                                                .padding(horizontal = 6.dp, vertical = 1.dp),
+                                        )
+                                    }
+                                }
                             }
                             val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.reminderLeadDays)
                             Box(

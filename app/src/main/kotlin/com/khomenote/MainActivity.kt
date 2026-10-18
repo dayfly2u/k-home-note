@@ -10,9 +10,19 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +61,8 @@ import com.khomenote.ui.item.ItemFormScreen
 import com.khomenote.ui.item.ItemFormViewModel
 import com.khomenote.ui.item.ItemFormViewModelFactory
 import com.khomenote.ui.navigation.Screen
+import com.khomenote.ui.settings.SettingsScreen
+import com.khomenote.ui.theme.KHomeNoteTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -62,7 +74,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = AppContainer.getInstance(applicationContext)
         setContent {
-            MaterialTheme {
+            KHomeNoteTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val context = LocalContext.current
                     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -112,6 +124,10 @@ private class ScreenViewModelStoreOwner : ViewModelStoreOwner {
     override val viewModelStore = ViewModelStore()
 }
 
+// 하단 탭 3개 — 탭을 바꾸면 그 탭의 루트 화면 하나만 남도록 백스택을 리셋한다
+// (예: AssetDetail까지 들어간 상태에서 "홈" 탭을 누르면 그 중간 화면들은 다 버려진다).
+private val TAB_ROOTS = listOf(Screen.Home, Screen.AssetList, Screen.Settings)
+
 @Composable
 private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen>) {
     val current = backStack.last()
@@ -124,11 +140,46 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
             viewModelStoreOwners.remove(removed)?.viewModelStore?.clear()
         }
     }
+    fun switchTab(root: Screen) {
+        if (backStack.size == 1 && backStack.first() == root) return
+        while (backStack.isNotEmpty()) {
+            val removed = backStack.removeAt(backStack.lastIndex)
+            viewModelStoreOwners.remove(removed)?.viewModelStore?.clear()
+        }
+        backStack.add(root)
+    }
 
     BackHandler(enabled = backStack.size > 1) { pop() }
 
+    Scaffold(
+        bottomBar = {
+            if (backStack.size == 1 && current in TAB_ROOTS) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = current == Screen.Home,
+                        onClick = { switchTab(Screen.Home) },
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        label = { Text("홈") },
+                    )
+                    NavigationBarItem(
+                        selected = current == Screen.AssetList,
+                        onClick = { switchTab(Screen.AssetList) },
+                        icon = { Icon(Icons.Default.List, contentDescription = null) },
+                        label = { Text("모아보기") },
+                    )
+                    NavigationBarItem(
+                        selected = current == Screen.Settings,
+                        onClick = { switchTab(Screen.Settings) },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                        label = { Text("설정") },
+                    )
+                }
+            }
+        },
+    ) { padding ->
     val owner = viewModelStoreOwners.getOrPut(current) { ScreenViewModelStoreOwner() }
     CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
+        Box(modifier = Modifier.padding(padding)) {
         when (val screen = current) {
             is Screen.Home -> {
                 val vm = viewModel<HomeViewModel>(
@@ -140,8 +191,6 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 )
                 HomeScreen(
                     viewModel = vm,
-                    onManageAssets = { push(Screen.AssetList) },
-                    onManageCategories = { push(Screen.CategoryManagement) },
                     onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
                     onOneTimeTaskClick = { assetId -> push(Screen.AssetDetail(assetId)) },
                 )
@@ -160,8 +209,11 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     onAddAsset = { push(Screen.AssetForm(null)) },
                     onAssetClick = { assetId -> push(Screen.AssetDetail(assetId)) },
                     onEditAsset = { assetId -> push(Screen.AssetForm(assetId)) },
-                    onBack = { pop() },
                 )
+            }
+
+            is Screen.Settings -> {
+                SettingsScreen(onManageCategories = { push(Screen.CategoryManagement) })
             }
 
             is Screen.CategoryManagement -> {
@@ -223,5 +275,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 )
             }
         }
+        }
+    }
     }
 }
