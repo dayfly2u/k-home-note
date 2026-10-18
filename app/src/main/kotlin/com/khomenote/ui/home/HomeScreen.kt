@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -24,7 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -50,7 +53,9 @@ import com.khomenote.ui.theme.OrangeUrgent
 import com.khomenote.ui.theme.OrangeUrgentContainer
 import com.khomenote.ui.theme.OrangeUrgentText
 import com.khomenote.ui.theme.NumberFontFamily
+import com.khomenote.ui.theme.OrangeHeaderDot
 import com.khomenote.ui.theme.TealContainer
+import com.khomenote.ui.theme.TealHeaderMuted
 import com.khomenote.ui.theme.TealPrimary
 import com.khomenote.ui.theme.TextFaint
 import com.khomenote.ui.theme.TextSecondary
@@ -60,6 +65,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 /** 홈 대시보드 한 줄 — 주기성작업(소모품)과 일회성작업(알림 받기를 켠 것만)을 한 목록에 합쳐서 보여준다. */
 sealed interface HomeRowUiModel {
@@ -172,6 +180,78 @@ private fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle {
     }
 }
 
+private val HEADER_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일")
+
+@Composable
+private fun HomeHeader(summary: HomeSummaryCounts, onAddClick: () -> Unit) {
+    val today = remember { LocalDate.now() }
+    val weekday = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(TealPrimary, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text("생활달력", style = MaterialTheme.typography.labelSmall, color = TealHeaderMuted)
+                Text(
+                    "${today.format(HEADER_DATE_FORMAT)} $weekday",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+            }
+            TextButton(onClick = onAddClick) { Text("+ 추가", color = Color.White) }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            HomeSummaryTile("지났어요", summary.overdue, showDot = summary.overdue > 0)
+            HomeSummaryDivider()
+            HomeSummaryTile("챙길 때", summary.dueSoon)
+            HomeSummaryDivider()
+            HomeSummaryTile("한 달 안", summary.withinMonth)
+        }
+    }
+}
+
+@Composable
+private fun HomeSummaryTile(label: String, count: Int, showDot: Boolean = false) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (showDot) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(OrangeHeaderDot, shape = androidx.compose.foundation.shape.CircleShape),
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(
+                "$count",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontFamily = com.khomenote.ui.theme.NumberFontFamily,
+            )
+        }
+        Text(label, style = MaterialTheme.typography.labelSmall, color = TealHeaderMuted)
+    }
+}
+
+@Composable
+private fun HomeSummaryDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(32.dp)
+            .background(TealHeaderMuted),
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -191,7 +271,10 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("K-Home-Note") })
+            HomeHeader(
+                summary = items.summaryCounts(),
+                onAddClick = { /* TODO: 대상 고르기 시트 — 후속 계획(2.2-b)에서 구현 */ },
+            )
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
