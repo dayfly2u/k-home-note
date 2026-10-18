@@ -49,6 +49,7 @@ import com.khomenote.ui.theme.OnceTagBorder
 import com.khomenote.ui.theme.OrangeUrgent
 import com.khomenote.ui.theme.OrangeUrgentContainer
 import com.khomenote.ui.theme.OrangeUrgentText
+import com.khomenote.ui.theme.NumberFontFamily
 import com.khomenote.ui.theme.TealContainer
 import com.khomenote.ui.theme.TealPrimary
 import com.khomenote.ui.theme.TextFaint
@@ -283,6 +284,7 @@ fun HomeScreen(
                                     dStyle.text,
                                     color = dStyle.textColor,
                                     fontWeight = FontWeight.Bold,
+                                    fontFamily = NumberFontFamily,
                                     style = if (dStyle.large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyMedium,
                                 )
                             }

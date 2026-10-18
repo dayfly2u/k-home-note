@@ -34,8 +34,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.khomenote.backup.BackupManager
-import com.khomenote.ui.asset.SECTION_TITLE_COLOR
-import com.khomenote.ui.asset.SECTION_TITLE_TEXT_COLOR
+import com.khomenote.ui.theme.TealContainer
+import com.khomenote.ui.theme.TealPrimary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -133,10 +133,10 @@ private fun SettingsSectionHeader(title: String) {
     Text(
         title,
         fontWeight = FontWeight.Bold,
-        color = SECTION_TITLE_TEXT_COLOR,
+        color = TealPrimary,
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .background(SECTION_TITLE_COLOR, RoundedCornerShape(4.dp))
+            .background(TealContainer, RoundedCornerShape(4.dp))
             .padding(horizontal = 8.dp, vertical = 2.dp),
     )
 }
