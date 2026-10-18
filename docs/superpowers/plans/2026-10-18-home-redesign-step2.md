@@ -133,7 +133,7 @@ class HomeSummaryTest {
 
 - [ ] **Step 2: 테스트 실패 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeSummaryTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeSummaryTest"`
 Expected: FAIL — `DueBand`/`dueBandFor`가 아직 없어서 컴파일 에러.
 
 - [ ] **Step 3: 최소 구현 작성**
@@ -166,7 +166,7 @@ fun dueBandFor(daysUntilDue: Long, reminderLeadDays: Int): DueBand = when {
 
 - [ ] **Step 4: 테스트 통과 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeSummaryTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeSummaryTest"`
 Expected: PASS (7개 테스트 전부)
 
 - [ ] **Step 5: 커밋**
@@ -209,7 +209,7 @@ git commit -m "feat: D-day 구간 분류를 DueBand 공유 함수로 추출 (v0.
 
 - [ ] **Step 2: 테스트 실행(이미 통과해야 함 — Task 2에서 만든 함수라 리팩터 전인데도 통과)**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeSummaryTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeSummaryTest"`
 Expected: PASS (8개)
 
 - [ ] **Step 3: `dDayStyle`을 `dueBandFor` 기반으로 리팩터**
@@ -297,7 +297,7 @@ class HomeSummaryCountsTest {
 
 - [ ] **Step 2: 테스트 실패 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeSummaryCountsTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeSummaryCountsTest"`
 Expected: FAIL — `HomeSummaryCounts`/`summaryCounts`가 없어서 컴파일 에러.
 
 - [ ] **Step 3: 최소 구현 작성**
@@ -318,7 +318,7 @@ fun List<HomeRowUiModel>.summaryCounts(): HomeSummaryCounts {
 
 - [ ] **Step 4: 테스트 통과 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeSummaryCountsTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeSummaryCountsTest"`
 Expected: PASS (2개)
 
 - [ ] **Step 5: 커밋**
@@ -379,7 +379,7 @@ class HomeGroupedBySectionTest {
 
 - [ ] **Step 2: 테스트 실패 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeGroupedBySectionTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeGroupedBySectionTest"`
 Expected: FAIL — `groupedBySection`이 없어서 컴파일 에러.
 
 - [ ] **Step 3: 최소 구현 작성**
@@ -397,7 +397,7 @@ fun <T : HomeRowUiModel> List<T>.groupedBySection(): List<Pair<DueBand, List<T>>
 
 - [ ] **Step 4: 테스트 통과 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeGroupedBySectionTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeGroupedBySectionTest"`
 Expected: PASS (3개)
 
 - [ ] **Step 5: 커밋**
@@ -479,7 +479,7 @@ class HomeSubtitleTest {
 
 - [ ] **Step 2: 테스트 실패 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeSubtitleTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeSubtitleTest"`
 Expected: FAIL — `formatRecurringSubtitle`/`formatOneTimeSubtitle`이 없어서 컴파일 에러.
 
 - [ ] **Step 3: 최소 구현 작성**
@@ -528,7 +528,7 @@ fun formatOneTimeSubtitle(record: RepairRecordEntity): String {
 
 - [ ] **Step 4: 테스트 통과 확인**
 
-Run: `cd C:\github\k-home-note && .\gradlew.bat test --tests "com.khomenote.ui.home.HomeSubtitleTest"`
+Run: `.\gradlew.bat :app:testDebugUnitTest --tests "com.khomenote.ui.home.HomeSubtitleTest"`
 Expected: PASS (7개)
 
 - [ ] **Step 5: 커밋**
