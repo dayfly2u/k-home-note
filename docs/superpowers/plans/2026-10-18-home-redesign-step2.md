@@ -503,19 +503,12 @@ fun formatRecurringSubtitle(item: ConsumableItemEntity, latestRecordDate: LocalD
     return "$intervalLabel$lastDoneLabel"
 }
 
-// cycleDays를 "6개월마다"/"1년마다"/"40일마다"처럼 가장 큰 단위 하나로 표현한다.
-// 365로 안 나누어지는 애매한 값(예: 400일)은 "1년 1개월마다"처럼 두 단위까지만 보여준다.
-internal fun formatIntervalKorean(cycleDays: Int): String {
-    val years = cycleDays / 365
-    val remAfterYears = cycleDays % 365
-    val months = remAfterYears / 30
-    val days = remAfterYears % 30
-    val parts = buildList {
-        if (years > 0) add("${years}년")
-        if (months > 0) add("${months}개월")
-        if (years == 0 && months == 0) add("${days}일")
-    }
-    return "${parts.joinToString(" ")}마다"
+// cycleDays를 "6개월마다"/"1년마다"처럼 깔끔하게 나누어지는 단위로 표현하고, 365/30 어느 쪽으로도
+// 안 나누어지는 애매한 값(예: 40일, 45일)은 "40일마다"처럼 일 단위 그대로 보여준다.
+internal fun formatIntervalKorean(cycleDays: Int): String = when {
+    cycleDays % 365 == 0 -> "${cycleDays / 365}년마다"
+    cycleDays % 30 == 0 -> "${cycleDays / 30}개월마다"
+    else -> "${cycleDays}일마다"
 }
 
 fun formatOneTimeSubtitle(record: RepairRecordEntity): String {
