@@ -1,20 +1,17 @@
 package com.khomenote.ui.asset
 
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +26,11 @@ import com.khomenote.data.local.entity.AssetEntity
 import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.CategoryRepository
+import com.khomenote.ui.common.FormCard
+import com.khomenote.ui.common.FormLabel
+import com.khomenote.ui.common.FormTopBar
+import com.khomenote.ui.common.KFilterChip
+import com.khomenote.ui.common.KTextField
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -113,7 +115,7 @@ class AssetFormViewModelFactory(
         AssetFormViewModel(assetRepository, categoryRepository, assetId) as T
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** 대상(자산) 추가·수정 폼 — 주기성작업 폼과 같은 ✕ 닫기 + 저장 알약 + 흰 카드 스타일. */
 @Composable
 fun AssetFormScreen(
     viewModel: AssetFormViewModel,
@@ -126,43 +128,62 @@ fun AssetFormScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(if (isNew) "자산 추가" else "자산 수정") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("< 뒤로") } },
-                actions = {
-                    TextButton(
-                        onClick = { viewModel.save(onSaved) },
-                        enabled = viewModel.canSave(),
-                    ) { Text("저장") }
-                },
+            FormTopBar(
+                title = if (isNew) "대상 추가" else "대상 수정",
+                canSave = viewModel.canSave(),
+                onClose = onBack,
+                onSave = { viewModel.save(onSaved) },
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 12.dp),
-            ) {
-                categories.forEach { category ->
-                    FilterChip(
-                        selected = viewModel.categoryId == category.id,
-                        onClick = { viewModel.onCategoryChange(category.id) },
-                        label = { Text("${category.emoji} ${category.name}") },
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, top = 6.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            FormCard {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FormLabel("카테고리")
+                    if (categories.isEmpty()) {
+                        Text("카테고리가 없어요. 설정에서 먼저 카테고리를 추가해 주세요.")
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            categories.forEach { category ->
+                                KFilterChip(
+                                    selected = viewModel.categoryId == category.id,
+                                    label = "${category.emoji} ${category.name}",
+                                    onClick = { viewModel.onCategoryChange(category.id) },
+                                )
+                            }
+                        }
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FormLabel("이름")
+                    KTextField(
+                        value = viewModel.name,
+                        onValueChange = viewModel::onNameChange,
+                        placeholder = "예: 다이슨 V15, 아반떼 하이브리드",
                     )
                 }
             }
-            OutlinedTextField(
-                value = viewModel.name,
-                onValueChange = viewModel::onNameChange,
-                label = { Text("이름 (예: 다이슨 V15, 아반떼 하이브리드)") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-            )
-            OutlinedTextField(
-                value = viewModel.memo,
-                onValueChange = viewModel::onMemoChange,
-                label = { Text("메모") },
-                modifier = Modifier.fillMaxWidth(),
-            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                FormLabel("메모")
+                KTextField(
+                    value = viewModel.memo,
+                    onValueChange = viewModel::onMemoChange,
+                    placeholder = "예: 12가 3456 · 2023년 3월 출고",
+                    singleLine = false,
+                )
+            }
         }
     }
 }

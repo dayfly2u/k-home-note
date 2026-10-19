@@ -45,6 +45,8 @@ import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.notification.ReminderScheduler
+import com.khomenote.ui.common.FormCard
+import com.khomenote.ui.common.FormTopBar
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.KTextField
 import com.khomenote.ui.common.NumberBox
@@ -293,33 +295,12 @@ fun ItemFormScreen(
     val canSave = viewModel.canSave()
     Scaffold(
         topBar = {
-            // 시안(ItemForm.dc.html): ✕ 닫기 + 제목 + 오른쪽 "저장" 알약 버튼.
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "닫기", modifier = Modifier.size(22.dp))
-                }
-                Text(
-                    if (isNew) "주기성작업 추가" else "주기성작업 수정",
-                    modifier = Modifier.weight(1f),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Row(
-                    modifier = Modifier
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (canSave) TealPrimary else ChipBorderUnselected)
-                        .then(if (canSave) Modifier.clickable { viewModel.save(onSaved) } else Modifier)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("저장", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                }
-            }
+            FormTopBar(
+                title = if (isNew) "주기성작업 추가" else "주기성작업 수정",
+                canSave = canSave,
+                onClose = onBack,
+                onSave = { viewModel.save(onSaved) },
+            )
         },
     ) { padding ->
         Column(
@@ -479,21 +460,6 @@ fun ItemFormScreen(
             }
         }
     }
-}
-
-@Composable
-private fun FormCard(content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(18.dp)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(SurfaceWhite)
-            .border(1.dp, CardBorder, shape)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        content = content,
-    )
 }
 
 @Composable
