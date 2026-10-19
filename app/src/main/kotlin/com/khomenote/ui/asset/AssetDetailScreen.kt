@@ -23,8 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -101,7 +104,7 @@ data class AssetDetailUiState(
 )
 
 class AssetDetailViewModel(
-    assetRepository: AssetRepository,
+    private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
     private val repairRecordRepository: RepairRecordRepository,
     categoryRepository: CategoryRepository,
@@ -115,6 +118,14 @@ class AssetDetailViewModel(
     ) { asset, items, repairRecords, categories ->
         AssetDetailUiState(asset, items, repairRecords, categories.firstOrNull { it.id == asset?.categoryId })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AssetDetailUiState())
+
+    /** 대상을 지운다(이 대상의 일회성작업 기록도 함께 삭제됨). 주기성작업이 남아 있으면 호출하는 쪽에서 막는다. */
+    fun deleteAsset(asset: AssetEntity, onDone: () -> Unit) {
+        viewModelScope.launch {
+            assetRepository.delete(asset)
+            onDone()
+        }
+    }
 
     fun deleteItem(item: ConsumableItemEntity) {
         viewModelScope.launch { consumableItemRepository.delete(item) }
@@ -229,6 +240,36 @@ fun AssetDetailScreen(
 
     val assetLabel = asset?.let { "${uiState.category?.emoji.orEmpty()} ${it.name}".trim() }
 
+    var showDeleteAssetConfirm by remember { mutableStateOf(false) }
+    var showDeleteAssetBlocked by remember { mutableStateOf(false) }
+
+    if (showDeleteAssetConfirm && asset != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAssetConfirm = false },
+            title = { Text("대상을 삭제할까요?") },
+            text = {
+                val oneTimeNote = if (uiState.repairRecords.isNotEmpty()) " 일회성작업 기록 ${uiState.repairRecords.size}개도 함께 삭제됩니다." else ""
+                Text("\"${asset.name}\"이 삭제되며 되돌릴 수 없습니다.$oneTimeNote")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteAssetConfirm = false
+                    viewModel.deleteAsset(asset, onDone = onBack)
+                }) { Text("삭제") }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteAssetConfirm = false }) { Text("취소") } },
+        )
+    }
+
+    if (showDeleteAssetBlocked && asset != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAssetBlocked = false },
+            title = { Text("삭제할 수 없습니다") },
+            text = { Text("\"${asset.name}\"에 등록된 주기성작업이 있습니다. 먼저 모두 삭제한 뒤 다시 시도해주세요.") },
+            confirmButton = { TextButton(onClick = { showDeleteAssetBlocked = false }) { Text("확인") } },
+        )
+    }
+
     if (showRepairDialog) {
         RepairRecordSheet(
             initial = null,
@@ -299,6 +340,24 @@ fun AssetDetailScreen(
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onEditAsset) {
                     Text("대상 수정", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
+                }
+                if (asset != null) {
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(width = 36.dp, height = 44.dp)) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "더보기", tint = TextFaint, modifier = Modifier.size(18.dp))
+                        }
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("대상 삭제") },
+                                onClick = {
+                                    menuOpen = false
+                                    // 주기성작업이 남아 있으면 지울 수 없다(예전 모아보기 카드의 삭제와 같은 규칙).
+                                    if (uiState.items.isNotEmpty()) showDeleteAssetBlocked = true else showDeleteAssetConfirm = true
+                                },
+                            )
+                        }
+                    }
                 }
             }
         },
