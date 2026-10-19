@@ -1,5 +1,7 @@
 package com.khomenote.ui.item
 
+import com.khomenote.data.local.entity.ConsumableItemEntity
+import com.khomenote.domain.DueDateCalculator
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -9,6 +11,21 @@ import kotlin.math.roundToInt
 internal data class StatValue(val number: String, val unit: String)
 
 private val EMPTY_STAT = StatValue("-", "")
+
+/**
+ * 완료 기록을 [recordDate]로 남기면 다음 예정일이 언제가 되는지 — 완료 기록 시트의 "다음 예정일은 …로 넘어가요".
+ * 다음 예정일은 가장 최근 기록 기준이므로, 이미 더 최근 기록([otherRecordDates])이 있으면 그 날짜를 따른다.
+ */
+internal fun nextDueAfterRecord(item: ConsumableItemEntity, otherRecordDates: List<LocalDate>, recordDate: LocalDate): LocalDate =
+    DueDateCalculator.nextDueDate(
+        itemCreatedAt = item.createdAt,
+        cycleDays = item.cycleDays,
+        latestRecordDate = (otherRecordDates + recordDate).max(),
+        monthlyDueDay = item.monthlyDueDay,
+        yearlyDueMonth = item.yearlyDueMonth,
+        yearlyDueDay = item.yearlyDueDay,
+        yearlyDueIsLunar = item.isYearlyLunar == true,
+    )
 
 /** 기록 날짜들 사이의 평균 간격(일). 연속한 기록 간격의 평균 = (마지막 − 처음) / (개수 − 1). 기록이 2개 미만이면 null. */
 internal fun averageIntervalDays(dates: List<LocalDate>): Double? {

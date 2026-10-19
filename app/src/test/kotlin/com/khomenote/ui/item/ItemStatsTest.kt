@@ -1,11 +1,30 @@
 package com.khomenote.ui.item
 
+import com.khomenote.data.local.entity.ConsumableItemEntity
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ItemStatsTest {
+
+    @Test
+    fun `간격 주기는 기록한 날부터 주기만큼 뒤가 다음 예정일이다`() {
+        val item = ConsumableItemEntity(assetId = 1, name = "엔진오일", cycleDays = 180, createdAt = LocalDate.of(2025, 1, 1))
+        val next = nextDueAfterRecord(item, otherRecordDates = emptyList(), recordDate = LocalDate.of(2026, 10, 18))
+        assertEquals(LocalDate.of(2027, 4, 16), next)
+    }
+
+    @Test
+    fun `이미 더 최근 기록이 있으면 오래된 날짜를 기록해도 다음 예정일은 최근 기록을 따른다`() {
+        val item = ConsumableItemEntity(assetId = 1, name = "엔진오일", cycleDays = 180, createdAt = LocalDate.of(2025, 1, 1))
+        val next = nextDueAfterRecord(
+            item,
+            otherRecordDates = listOf(LocalDate.of(2026, 10, 18)),
+            recordDate = LocalDate.of(2026, 1, 1),
+        )
+        assertEquals(LocalDate.of(2027, 4, 16), next)
+    }
 
     @Test
     fun `기록이 없거나 하나면 평균 간격이 없다`() {

@@ -288,6 +288,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                         container.consumableItemRepository,
                         container.replacementRecordRepository,
                         container.photoStorage,
+                        container.categoryRepository,
                         screen.itemId,
                     ),
                     key = "item-detail-${screen.itemId}",

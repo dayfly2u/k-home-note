@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.entity.ReplacementRecordEntity
+import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
@@ -114,20 +115,30 @@ data class ItemDetailUiState(
     val status: ConsumableItemWithStatus? = null,
     val records: List<ReplacementRecordEntity> = emptyList(),
     val loaded: Boolean = false,
+    /** 완료 기록 시트 머리에 보여줄 대상의 카테고리 이모지. */
+    val categoryEmoji: String = "",
 )
 
 class ItemDetailViewModel(
     private val consumableItemRepository: ConsumableItemRepository,
     private val replacementRecordRepository: ReplacementRecordRepository,
     private val photoStorage: PhotoStorage,
+    categoryRepository: CategoryRepository,
     private val itemId: Long,
 ) : ViewModel() {
 
     val uiState: StateFlow<ItemDetailUiState> = combine(
         consumableItemRepository.getWithStatusById(itemId),
         replacementRecordRepository.getByItem(itemId),
-    ) { status, records -> ItemDetailUiState(status, records, loaded = true) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ItemDetailUiState())
+        categoryRepository.getAll(),
+    ) { status, records, categories ->
+        ItemDetailUiState(
+            status = status,
+            records = records,
+            loaded = true,
+            categoryEmoji = categories.firstOrNull { it.id == status?.categoryId }?.emoji.orEmpty(),
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ItemDetailUiState())
 
     fun recordReplacement(date: LocalDate, price: Long?, vendor: String?, photoUri: String?, memo: String?) {
         viewModelScope.launch {
@@ -170,11 +181,12 @@ class ItemDetailViewModelFactory(
     private val consumableItemRepository: ConsumableItemRepository,
     private val replacementRecordRepository: ReplacementRecordRepository,
     private val photoStorage: PhotoStorage,
+    private val categoryRepository: CategoryRepository,
     private val itemId: Long,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        ItemDetailViewModel(consumableItemRepository, replacementRecordRepository, photoStorage, itemId) as T
+        ItemDetailViewModel(consumableItemRepository, replacementRecordRepository, photoStorage, categoryRepository, itemId) as T
 }
 
 private val RING_TRACK_COLOR = Color(0xFFE6EDED)
@@ -207,8 +219,12 @@ fun ItemDetailScreen(
         }
     }
 
-    if (showRecordDialog) {
-        ReplacementRecordDialog(
+    if (showRecordDialog && status != null) {
+        ReplacementRecordSheet(
+            item = status.item,
+            assetName = status.assetName,
+            categoryEmoji = uiState.categoryEmoji,
+            otherRecordDates = uiState.records.map { it.date },
             onDismiss = { showRecordDialog = false },
             onSave = { input ->
                 viewModel.recordReplacement(input.date, input.price, input.vendor, input.photoUri, input.memo)
@@ -220,16 +236,22 @@ fun ItemDetailScreen(
     }
 
     editingRecord?.let { target ->
-        ReplacementRecordDialog(
-            initial = target,
-            onDismiss = { editingRecord = null },
-            onSave = { input ->
-                viewModel.updateRecord(target, input.date, input.price, input.vendor, input.photoUri, input.memo)
-                editingRecord = null
-            },
-            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
-            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
-        )
+        if (status != null) {
+            ReplacementRecordSheet(
+                item = status.item,
+                assetName = status.assetName,
+                categoryEmoji = uiState.categoryEmoji,
+                otherRecordDates = uiState.records.filter { it.id != target.id }.map { it.date },
+                initial = target,
+                onDismiss = { editingRecord = null },
+                onSave = { input ->
+                    viewModel.updateRecord(target, input.date, input.price, input.vendor, input.photoUri, input.memo)
+                    editingRecord = null
+                },
+                onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+                onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
+            )
+        }
     }
 
     recordPendingDelete?.let { record ->
