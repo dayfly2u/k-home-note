@@ -9,33 +9,41 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,13 +55,17 @@ import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
+import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
+import com.khomenote.ui.theme.CardBorder
+import com.khomenote.ui.theme.NumberFontFamily
 import com.khomenote.ui.theme.OnceTagBorder
+import com.khomenote.ui.theme.OrangeHeaderDot
 import com.khomenote.ui.theme.OrangeUrgent
 import com.khomenote.ui.theme.OrangeUrgentContainer
 import com.khomenote.ui.theme.OrangeUrgentText
-import com.khomenote.ui.theme.NumberFontFamily
-import com.khomenote.ui.theme.OrangeHeaderDot
+import com.khomenote.ui.theme.RowDivider
+import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TealContainer
 import com.khomenote.ui.theme.TealHeaderMuted
 import com.khomenote.ui.theme.TealPrimary
@@ -186,70 +198,148 @@ private val HEADER_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern(
 private fun HomeHeader(summary: HomeSummaryCounts, onAddClick: () -> Unit) {
     val today = remember { LocalDate.now() }
     val weekday = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
+    // 앱이 targetSdk 36이라 상태바 뒤까지 그려지는데, 바깥 Scaffold가 이 화면에는 상태바 높이를 패딩으로 주지 않는다
+    // (AppRoot 참고) — 청록 바탕이 상태바 영역까지 덮고, 그 위 흰 상태바 아이콘이 잘 보이도록 헤더가 직접 상태바 높이만큼 내려앉는다.
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(TealPrimary, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(top = statusBarTop)
+            .padding(start = 20.dp, end = 12.dp, top = 18.dp, bottom = 16.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
-                Text("생활달력", style = MaterialTheme.typography.labelSmall, color = TealHeaderMuted)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("생활달력", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TealHeaderMuted)
                 Text(
                     "${today.format(HEADER_DATE_FORMAT)} $weekday",
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White,
                 )
             }
-            TextButton(onClick = onAddClick) { Text("+ 추가", color = Color.White) }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, HEADER_BUTTON_BORDER, CircleShape)
+                    .clickable(onClick = onAddClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "추가", tint = Color.White, modifier = Modifier.size(20.dp))
+            }
         }
         Spacer(Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            HomeSummaryTile("지났어요", summary.overdue, showDot = summary.overdue > 0)
-            HomeSummaryDivider()
-            HomeSummaryTile("챙길 때", summary.dueSoon)
-            HomeSummaryDivider()
-            HomeSummaryTile("한 달 안", summary.withinMonth)
+        Row(modifier = Modifier.fillMaxWidth()) {
+            HomeSummaryTile("지났어요", summary.overdue, Modifier.weight(1f), showDot = summary.overdue > 0)
+            HomeSummaryTile("챙길 때", summary.dueSoon, Modifier.weight(1f), leftDivider = true)
+            HomeSummaryTile("한 달 안", summary.withinMonth, Modifier.weight(1f), leftDivider = true)
         }
     }
 }
 
+private val HEADER_BUTTON_BORDER = Color(0xFF4F8C90)
+private val HEADER_DIVIDER = Color(0xFF2E7277)
+
 @Composable
-private fun HomeSummaryTile(label: String, count: Int, showDot: Boolean = false) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (showDot) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .background(OrangeHeaderDot, shape = androidx.compose.foundation.shape.CircleShape),
-                )
-                Spacer(Modifier.width(4.dp))
-            }
+private fun HomeSummaryTile(
+    label: String,
+    count: Int,
+    modifier: Modifier = Modifier,
+    showDot: Boolean = false,
+    leftDivider: Boolean = false,
+) {
+    Column(
+        modifier = modifier
+            .then(
+                if (leftDivider) {
+                    Modifier.drawBehind {
+                        drawLine(HEADER_DIVIDER, Offset(0f, 0f), Offset(0f, size.height), strokeWidth = 1.dp.toPx())
+                    }.padding(start = 16.dp)
+                } else {
+                    Modifier
+                },
+            ),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 "$count",
-                style = MaterialTheme.typography.headlineSmall,
+                fontSize = 28.sp,
+                lineHeight = 28.sp,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontFamily = com.khomenote.ui.theme.NumberFontFamily,
+                fontFamily = NumberFontFamily,
             )
+            if (showDot) {
+                Box(modifier = Modifier.size(8.dp).background(OrangeHeaderDot, CircleShape))
+            }
         }
-        Text(label, style = MaterialTheme.typography.labelSmall, color = TealHeaderMuted)
+        Text(label, fontSize = 12.sp, color = TealHeaderMuted)
     }
 }
 
 @Composable
-private fun HomeSummaryDivider() {
-    Box(
+private fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit) {
+    val subtitle = when (uiModel) {
+        is HomeRowUiModel.Recurring -> formatRecurringSubtitle(uiModel.status.item, uiModel.status.latestRecordDate)
+        is HomeRowUiModel.OneTime -> formatOneTimeSubtitle(uiModel.record.record)
+    }
+    val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.reminderLeadDays)
+    Row(
         modifier = Modifier
-            .width(1.dp)
-            .height(32.dp)
-            .background(TealHeaderMuted),
-    )
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${uiModel.assetName} · ${uiModel.title}",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (uiModel is HomeRowUiModel.OneTime) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "한 번",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TealPrimary,
+                        modifier = Modifier
+                            .border(1.dp, OnceTagBorder, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    )
+                }
+            }
+            Text(subtitle, fontSize = 12.sp, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Box(
+            modifier = Modifier
+                .widthIn(min = 58.dp)
+                .height(36.dp)
+                .background(dStyle.background, RoundedCornerShape(10.dp))
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                dStyle.text,
+                color = dStyle.textColor,
+                fontWeight = FontWeight.Bold,
+                fontFamily = NumberFontFamily,
+                fontSize = if (dStyle.large) 18.sp else 15.sp,
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -266,7 +356,6 @@ fun HomeScreen(
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.categoryId == categoryFilter }
     }
-    val categoryById = remember(categories) { categories.associateBy { it.id } }
     val listState = rememberLazyListState()
 
     Scaffold(
@@ -280,19 +369,19 @@ fun HomeScreen(
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(
+                KFilterChip(
                     selected = categoryFilter == null,
+                    label = "전체",
                     onClick = { viewModel.setCategoryFilter(null) },
-                    label = { Text("전체") },
                 )
                 categories.forEach { category ->
-                    FilterChip(
+                    KFilterChip(
                         selected = categoryFilter == category.id,
+                        label = "${category.emoji} ${category.name}",
                         onClick = { viewModel.setCategoryFilter(category.id) },
-                        label = { Text("${category.emoji} ${category.name}") },
                     )
                 }
             }
@@ -304,80 +393,42 @@ fun HomeScreen(
                 return@Scaffold
             }
             Box(modifier = Modifier.weight(1f)) {
-                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                ) {
                     filteredItems.groupedBySection().forEach { (band, rowsInBand) ->
                         item(key = "section-${band.name}") {
                             Text(
                                 band.sectionTitle,
-                                style = MaterialTheme.typography.labelLarge,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TealPrimary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(start = 4.dp, top = 12.dp, end = 4.dp, bottom = 4.dp),
                             )
                         }
-                        items(
-                            rowsInBand,
-                            key = {
-                                when (it) {
-                                    is HomeRowUiModel.Recurring -> "recurring-${it.status.item.id}"
-                                    is HomeRowUiModel.OneTime -> "onetime-${it.record.record.id}"
-                                }
-                            },
-                        ) { uiModel ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth()
-                                    .clickable {
+                        item(key = "card-${band.name}") {
+                            val cardShape = RoundedCornerShape(18.dp)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(cardShape)
+                                    .background(SurfaceWhite)
+                                    .border(1.dp, CardBorder, cardShape),
+                            ) {
+                                rowsInBand.forEachIndexed { index, uiModel ->
+                                    if (index > 0) HorizontalDivider(color = RowDivider)
+                                    HomeRow(uiModel) {
                                         when (uiModel) {
                                             is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
                                             is HomeRowUiModel.OneTime -> onOneTimeTaskClick(uiModel.record.record.assetId)
                                         }
                                     }
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            "${uiModel.assetName} · ${uiModel.title}",
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                        if (uiModel is HomeRowUiModel.OneTime) {
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(
-                                                "한 번",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = TealPrimary,
-                                                modifier = Modifier
-                                                    .border(1.dp, OnceTagBorder, RoundedCornerShape(999.dp))
-                                                    .padding(horizontal = 6.dp, vertical = 1.dp),
-                                            )
-                                        }
-                                    }
-                                    val subtitle = when (uiModel) {
-                                        is HomeRowUiModel.Recurring -> formatRecurringSubtitle(uiModel.status.item, uiModel.status.latestRecordDate)
-                                        is HomeRowUiModel.OneTime -> formatOneTimeSubtitle(uiModel.record.record)
-                                    }
-                                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-                                }
-                                val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.reminderLeadDays)
-                                Box(
-                                    modifier = Modifier
-                                        .background(dStyle.background, RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                ) {
-                                    Text(
-                                        dStyle.text,
-                                        color = dStyle.textColor,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = NumberFontFamily,
-                                        style = if (dStyle.large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyMedium,
-                                    )
                                 }
                             }
-                            HorizontalDivider()
                         }
                     }
+                    item(key = "bottom-space") { Spacer(Modifier.height(16.dp)) }
                 }
                 MoreBelowIndicator(
                     listState = listState,

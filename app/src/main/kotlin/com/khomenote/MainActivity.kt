@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -26,12 +27,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -96,7 +100,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    AppRoot(container = container, backStack = backStack)
+                    AppRoot(container = container, backStack = backStack, window = window)
                 }
             }
         }
@@ -129,9 +133,16 @@ private class ScreenViewModelStoreOwner : ViewModelStoreOwner {
 private val TAB_ROOTS = listOf(Screen.Home, Screen.AssetList, Screen.Settings)
 
 @Composable
-private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen>) {
+private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen>, window: android.view.Window) {
     val current = backStack.last()
     val viewModelStoreOwners = remember { java.util.IdentityHashMap<Screen, ScreenViewModelStoreOwner>() }
+
+    // 홈은 청록 헤더가 상태바 뒤까지 덮으므로 흰 상태바 아이콘이, 나머지 화면은 밝은 바탕이므로 어두운 아이콘이 보여야 한다.
+    // targetSdk 36에서는 시스템이 상태바 바탕을 투명하게 두기 때문에 앱이 직접 아이콘 색을 정해줘야 한다.
+    val view = LocalView.current
+    SideEffect {
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = current != Screen.Home
+    }
 
     fun push(screen: Screen) { backStack.add(screen) }
     fun pop() {
@@ -179,7 +190,9 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
     ) { padding ->
     val owner = viewModelStoreOwners.getOrPut(current) { ScreenViewModelStoreOwner() }
     CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
-        Box(modifier = Modifier.padding(padding)) {
+        // 홈은 위쪽 패딩(상태바 높이)을 빼고 HomeHeader가 직접 상태바 영역까지 칠한다.
+        val contentPadding = if (current == Screen.Home) PaddingValues(bottom = padding.calculateBottomPadding()) else padding
+        Box(modifier = Modifier.padding(contentPadding)) {
         when (val screen = current) {
             is Screen.Home -> {
                 val vm = viewModel<HomeViewModel>(
