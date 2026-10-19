@@ -1,5 +1,6 @@
 package com.khomenote.ui.home
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,6 +65,7 @@ import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.ui.asset.OneTimeDoneSheet
+import com.khomenote.ui.common.AppIcons
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.theme.CardBorder
@@ -77,6 +80,7 @@ import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TealContainer
 import com.khomenote.ui.theme.TealHeaderMuted
 import com.khomenote.ui.theme.TealPrimary
+import com.khomenote.ui.theme.TealPrimaryDark
 import com.khomenote.ui.theme.TextFaint
 import com.khomenote.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -217,7 +221,12 @@ internal fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle {
 private val HEADER_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일")
 
 @Composable
-private fun HomeHeader(summary: HomeSummaryCounts, onAddClick: () -> Unit) {
+private fun HomeHeader(
+    summary: HomeSummaryCounts,
+    viewMode: HomeViewMode,
+    onViewModeChange: (HomeViewMode) -> Unit,
+    onAddClick: () -> Unit,
+) {
     val today = remember { LocalDate.now() }
     val weekday = today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
     // 앱이 targetSdk 36이라 상태바 뒤까지 그려지는데, 바깥 Scaffold가 이 화면에는 상태바 높이를 패딩으로 주지 않는다
@@ -228,7 +237,7 @@ private fun HomeHeader(summary: HomeSummaryCounts, onAddClick: () -> Unit) {
             .fillMaxWidth()
             .background(TealPrimary, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
             .padding(top = statusBarTop)
-            .padding(start = 20.dp, end = 12.dp, top = 18.dp, bottom = 16.dp),
+            .padding(start = 20.dp, end = 12.dp, top = 18.dp, bottom = if (viewMode == HomeViewMode.LIST) 16.dp else 14.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -244,6 +253,7 @@ private fun HomeHeader(summary: HomeSummaryCounts, onAddClick: () -> Unit) {
                     color = Color.White,
                 )
             }
+            ViewModeToggle(viewMode, onViewModeChange)
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -255,11 +265,44 @@ private fun HomeHeader(summary: HomeSummaryCounts, onAddClick: () -> Unit) {
                 Icon(Icons.Default.Add, contentDescription = "추가", tint = Color.White, modifier = Modifier.size(20.dp))
             }
         }
-        Spacer(Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            HomeSummaryTile("지났어요", summary.overdue, Modifier.weight(1f), showDot = summary.overdue > 0)
-            HomeSummaryTile("챙길 때", summary.dueSoon, Modifier.weight(1f), leftDivider = true)
-            HomeSummaryTile("한 달 안", summary.withinMonth, Modifier.weight(1f), leftDivider = true)
+        // 시안(MonthView.dc.html)의 달력 보기 헤더에는 요약 3칸이 없다.
+        if (viewMode == HomeViewMode.LIST) {
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                HomeSummaryTile("지났어요", summary.overdue, Modifier.weight(1f), showDot = summary.overdue > 0)
+                HomeSummaryTile("챙길 때", summary.dueSoon, Modifier.weight(1f), leftDivider = true)
+                HomeSummaryTile("한 달 안", summary.withinMonth, Modifier.weight(1f), leftDivider = true)
+            }
+        }
+    }
+}
+
+/** 헤더 오른쪽의 목록 / 달력 전환 — 선택된 쪽만 흰 바탕. */
+@Composable
+private fun ViewModeToggle(viewMode: HomeViewMode, onChange: (HomeViewMode) -> Unit) {
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(22.dp)).background(TealPrimaryDark).padding(3.dp),
+    ) {
+        listOf(
+            Triple(HomeViewMode.LIST, AppIcons.ViewList, "목록"),
+            Triple(HomeViewMode.CALENDAR, AppIcons.ViewCalendar, "달력"),
+        ).forEach { (mode, icon, description) ->
+            val selected = viewMode == mode
+            Box(
+                modifier = Modifier
+                    .size(width = 40.dp, height = 38.dp)
+                    .clip(RoundedCornerShape(19.dp))
+                    .background(if (selected) Color.White else Color.Transparent)
+                    .clickable { onChange(mode) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = description,
+                    tint = if (selected) TealPrimary else TealHeaderMuted,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
     }
 }
@@ -307,7 +350,7 @@ private fun HomeSummaryTile(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
+internal fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
     val subtitle = when (uiModel) {
         is HomeRowUiModel.Recurring -> formatRecurringSubtitle(uiModel.status.item, uiModel.status.latestRecordDate)
         is HomeRowUiModel.OneTime -> formatOneTimeSubtitle(uiModel.record.record)
@@ -383,6 +426,30 @@ fun HomeScreen(
     var showAddSheet by remember { mutableStateOf(false) }
     var completingOneTime by remember { mutableStateOf<HomeRowUiModel.OneTime?>(null) }
 
+    // 목록/달력 보기 선택은 앱을 껐다 켜도 유지한다(DB가 아니라 가벼운 설정값이라 SharedPreferences).
+    val context = LocalContext.current
+    val homePrefs = remember { context.getSharedPreferences("home_prefs", Context.MODE_PRIVATE) }
+    var viewMode by remember {
+        mutableStateOf(
+            runCatching { HomeViewMode.valueOf(homePrefs.getString("view_mode", null) ?: "LIST") }.getOrDefault(HomeViewMode.LIST),
+        )
+    }
+    fun changeViewMode(mode: HomeViewMode) {
+        viewMode = mode
+        homePrefs.edit().putString("view_mode", mode.name).apply()
+    }
+
+    // 목록과 달력 보기가 같은 행 동작을 쓴다 — 일회성작업은 가볍게 누르면 바로 "완료로 표시" 시트,
+    // 대신 그 대상의 상세(수정/삭제)는 꾹 눌러서 간다.
+    fun handleRowClick(uiModel: HomeRowUiModel) {
+        when (uiModel) {
+            is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
+            is HomeRowUiModel.OneTime -> completingOneTime = uiModel
+        }
+    }
+    fun rowLongClick(uiModel: HomeRowUiModel): (() -> Unit)? =
+        (uiModel as? HomeRowUiModel.OneTime)?.let { oneTime -> { onOneTimeTaskClick(oneTime.record.record.assetId) } }
+
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.categoryId == categoryFilter }
     }
@@ -418,6 +485,8 @@ fun HomeScreen(
         topBar = {
             HomeHeader(
                 summary = items.summaryCounts(),
+                viewMode = viewMode,
+                onViewModeChange = { changeViewMode(it) },
                 onAddClick = { showAddSheet = true },
             )
         },
@@ -440,6 +509,15 @@ fun HomeScreen(
                         onClick = { viewModel.setCategoryFilter(category.id) },
                     )
                 }
+            }
+            if (viewMode == HomeViewMode.CALENDAR) {
+                HomeMonthView(
+                    items = filteredItems,
+                    onRowClick = { handleRowClick(it) },
+                    onRowLongClick = { rowLongClick(it) },
+                    modifier = Modifier.weight(1f),
+                )
+                return@Scaffold
             }
             if (filteredItems.isEmpty()) {
                 Text(
@@ -476,17 +554,8 @@ fun HomeScreen(
                                     if (index > 0) HorizontalDivider(color = RowDivider)
                                     HomeRow(
                                         uiModel = uiModel,
-                                        // 일회성작업은 가볍게 누르면 바로 "완료로 표시" 시트가 열린다.
-                                        onClick = {
-                                            when (uiModel) {
-                                                is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
-                                                is HomeRowUiModel.OneTime -> completingOneTime = uiModel
-                                            }
-                                        },
-                                        // 대신 일회성작업의 대상 상세(수정/삭제)는 꾹 눌러서 간다.
-                                        onLongClick = (uiModel as? HomeRowUiModel.OneTime)?.let { oneTime ->
-                                            { onOneTimeTaskClick(oneTime.record.record.assetId) }
-                                        },
+                                        onClick = { handleRowClick(uiModel) },
+                                        onLongClick = rowLongClick(uiModel),
                                     )
                                 }
                             }

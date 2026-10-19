@@ -34,6 +34,18 @@ object AppIcons {
     /** 줄 그어진 종 — 알림이 꺼짐 */
     val BellOff: ImageVector by lazy { strokeIcon("BellOff", "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4M3 3l18 18") }
 
+    /** 점 있는 세 줄 — 홈 "목록" 보기 */
+    val ViewList: ImageVector by lazy { strokeIcon("ViewList", "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01") }
+
+    /** 달력 — 홈 "달력" 보기 */
+    val ViewCalendar: ImageVector by lazy {
+        strokeIcon("ViewCalendar", "M6 5h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3zM3 10h18M8 3v4M16 3v4")
+    }
+
+    val ChevronLeft: ImageVector by lazy { strokeIcon("ChevronLeft", "M15 5l-7 7 7 7") }
+
+    val ChevronRight: ImageVector by lazy { strokeIcon("ChevronRight", "M9 5l7 7-7 7") }
+
     /** 카메라 — 영수증 사진 */
     val Camera: ImageVector by lazy { strokeIcon("Camera", "M4 8h3l2-3h6l2 3h3v11H4zM8.5 13a3.5 3.5 0 1 0 7 0 3.5 3.5 0 1 0-7 0") }
 
