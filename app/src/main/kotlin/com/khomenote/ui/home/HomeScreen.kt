@@ -303,78 +303,80 @@ fun HomeScreen(
                 )
                 return@Scaffold
             }
-            Text(
-                "예정일순으로 정렬되어있습니다. \"한 번\" 표시는 일회성작업이에요.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
             Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                    items(
-                        filteredItems,
-                        key = {
-                            when (it) {
-                                is HomeRowUiModel.Recurring -> "recurring-${it.status.item.id}"
-                                is HomeRowUiModel.OneTime -> "onetime-${it.record.record.id}"
-                            }
-                        },
-                    ) { uiModel ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .clickable {
-                                    when (uiModel) {
-                                        is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
-                                        is HomeRowUiModel.OneTime -> onOneTimeTaskClick(uiModel.record.record.assetId)
-                                    }
-                                }
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                val category = categoryById[uiModel.categoryId]
-                                if (category != null) {
-                                    Text(
-                                        "${category.emoji} ${category.name}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline,
-                                    )
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        "${uiModel.assetName} · ${uiModel.title}",
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    if (uiModel is HomeRowUiModel.OneTime) {
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(
-                                            "한 번",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TealPrimary,
-                                            modifier = Modifier
-                                                .border(1.dp, OnceTagBorder, RoundedCornerShape(999.dp))
-                                                .padding(horizontal = 6.dp, vertical = 1.dp),
-                                        )
-                                    }
-                                }
-                            }
-                            val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.reminderLeadDays)
-                            Box(
-                                modifier = Modifier
-                                    .background(dStyle.background, RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                            ) {
-                                Text(
-                                    dStyle.text,
-                                    color = dStyle.textColor,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = NumberFontFamily,
-                                    style = if (dStyle.large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyMedium,
-                                )
-                            }
+                    filteredItems.groupedBySection().forEach { (band, rowsInBand) ->
+                        item(key = "section-${band.name}") {
+                            Text(
+                                band.sectionTitle,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TealPrimary,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
                         }
-                        HorizontalDivider()
+                        items(
+                            rowsInBand,
+                            key = {
+                                when (it) {
+                                    is HomeRowUiModel.Recurring -> "recurring-${it.status.item.id}"
+                                    is HomeRowUiModel.OneTime -> "onetime-${it.record.record.id}"
+                                }
+                            },
+                        ) { uiModel ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable {
+                                        when (uiModel) {
+                                            is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
+                                            is HomeRowUiModel.OneTime -> onOneTimeTaskClick(uiModel.record.record.assetId)
+                                        }
+                                    }
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            "${uiModel.assetName} · ${uiModel.title}",
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        if (uiModel is HomeRowUiModel.OneTime) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                "한 번",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = TealPrimary,
+                                                modifier = Modifier
+                                                    .border(1.dp, OnceTagBorder, RoundedCornerShape(999.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 1.dp),
+                                            )
+                                        }
+                                    }
+                                    val subtitle = when (uiModel) {
+                                        is HomeRowUiModel.Recurring -> formatRecurringSubtitle(uiModel.status.item, uiModel.status.latestRecordDate)
+                                        is HomeRowUiModel.OneTime -> formatOneTimeSubtitle(uiModel.record.record)
+                                    }
+                                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                                }
+                                val dStyle = dDayStyle(uiModel.daysUntilDue, uiModel.reminderLeadDays)
+                                Box(
+                                    modifier = Modifier
+                                        .background(dStyle.background, RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                ) {
+                                    Text(
+                                        dStyle.text,
+                                        color = dStyle.textColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = NumberFontFamily,
+                                        style = if (dStyle.large) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyMedium,
+                                    )
+                                }
+                            }
+                            HorizontalDivider()
+                        }
                     }
                 }
                 MoreBelowIndicator(
