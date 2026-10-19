@@ -203,7 +203,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     }
 
     if (showAddCategory) {
-        CategoryEditDialog(
+        CategoryEditSheet(
             initial = null,
             checkNameAvailable = { candidate -> viewModel.isNameAvailable(candidate) },
             isEmojiTaken = { candidate -> displayRows.any { it.category.emoji == candidate } },
@@ -216,7 +216,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     }
 
     editingCategory?.let { target ->
-        CategoryEditDialog(
+        CategoryEditSheet(
             initial = target,
             checkNameAvailable = { candidate -> viewModel.isNameAvailable(candidate, excludingId = target.id) },
             isEmojiTaken = { candidate -> displayRows.any { it.category.emoji == candidate && it.category.id != target.id } },
