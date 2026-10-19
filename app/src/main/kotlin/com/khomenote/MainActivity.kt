@@ -272,7 +272,13 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
 
             is Screen.ItemForm -> {
                 val vm = viewModel<ItemFormViewModel>(
-                    factory = ItemFormViewModelFactory(container.consumableItemRepository, screen.assetId, screen.itemId),
+                    factory = ItemFormViewModelFactory(
+                        container.consumableItemRepository,
+                        container.assetRepository,
+                        container.categoryRepository,
+                        screen.assetId,
+                        screen.itemId,
+                    ),
                     key = "item-form-${System.identityHashCode(screen)}",
                 )
                 ItemFormScreen(viewModel = vm, isNew = screen.itemId == null, onSaved = { pop() }, onBack = { pop() })

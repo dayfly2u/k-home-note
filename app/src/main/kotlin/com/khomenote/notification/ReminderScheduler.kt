@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
  */
 object ReminderScheduler {
     private const val UNIQUE_WORK_NAME = "reminder_daily_check"
-    private const val DEFAULT_HOUR = 8
+    const val DEFAULT_HOUR = 8
     private const val DEFAULT_MINUTE = 0
     private val ZONE: ZoneId = ZoneId.of("Asia/Seoul") // 기기 타임존에 기대지 않고 명시
 
