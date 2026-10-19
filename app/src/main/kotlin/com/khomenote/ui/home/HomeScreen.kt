@@ -185,13 +185,13 @@ class HomeViewModelFactory(
         HomeViewModel(consumableItemRepository, repairRecordRepository, categoryRepository, assetRepository) as T
 }
 
-private data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
+internal data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
 
 // 생활달력 리디자인(2026-10-18 redesign-brief.md 1장): 색을 청록 한 가지 + 급한 것만 주황으로 줄였다.
 // 지난 날짜(연체)는 주황 바탕에 흰 글자로 "D+N". 그 외는 남은 날짜에 따라 소모품별 알림 설정일
 // (reminderLeadDays) 이내는 연한주황, 31일 이하는 연한청록, 100일 이하/그 뒤는 바탕 없이 보조 글자색만
 // 두 단계로 흐리게 — 급하지 않은 구간은 눈에 크게 띌 이유가 없어 폰트를 작게 둔다.
-private fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle {
+internal fun dDayStyle(daysUntilDue: Long, reminderLeadDays: Int): DDayStyle {
     val overdueText = if (daysUntilDue == 0L) "오늘" else "D-$daysUntilDue"
     return when (dueBandFor(daysUntilDue, reminderLeadDays)) {
         DueBand.OVERDUE -> DDayStyle("D+${-daysUntilDue}", OrangeUrgent, Color.White, large = true)

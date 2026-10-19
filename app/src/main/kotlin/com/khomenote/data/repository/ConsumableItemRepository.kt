@@ -10,6 +10,8 @@ class ConsumableItemRepository(private val consumableItemDao: ConsumableItemDao)
     fun getByAsset(assetId: Long): Flow<List<ConsumableItemEntity>> = consumableItemDao.getByAsset(assetId)
     fun getAllWithStatus(): Flow<List<ConsumableItemWithStatus>> = consumableItemDao.getAllWithStatus()
     fun getWithStatusById(itemId: Long): Flow<ConsumableItemWithStatus?> = consumableItemDao.getWithStatusById(itemId)
+    fun getWithStatusByAsset(assetId: Long): Flow<List<ConsumableItemWithStatus>> =
+        consumableItemDao.getWithStatusByAsset(assetId)
 
     suspend fun save(item: ConsumableItemEntity): Long =
         if (item.id == 0L) consumableItemDao.insert(item) else { consumableItemDao.update(item); item.id }

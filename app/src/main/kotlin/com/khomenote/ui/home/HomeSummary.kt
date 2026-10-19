@@ -58,14 +58,20 @@ private val KOREAN_MONTH_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("M
  * 새로 만든다(둘은 쓰이는 화면이 달라서 같은 함수를 억지로 재사용하지 않는다).
  */
 fun formatRecurringSubtitle(item: ConsumableItemEntity, latestRecordDate: LocalDate?): String {
+    val cycleLabel = formatCycleLabel(item)
+    if (item.monthlyDueDay != null || item.yearlyDueMonth != null) return cycleLabel
+    val lastDoneLabel = latestRecordDate?.let { " · 지난번 ${it.format(KOREAN_MONTH_DAY)}" } ?: ""
+    return "$cycleLabel$lastDoneLabel"
+}
+
+/** "매달 25일" / "매년 11월 14일(음력)" / "6개월마다" — 주기 방식에 맞는 한국어 주기 표기(홈 둘째 줄, 대상 상세 공통). */
+fun formatCycleLabel(item: ConsumableItemEntity): String {
     item.monthlyDueDay?.let { return "매달 ${it}일" }
     item.yearlyDueMonth?.let { month ->
         val lunarSuffix = if (item.isYearlyLunar == true) "(음력)" else ""
         return "매년 ${month}월 ${item.yearlyDueDay}일$lunarSuffix"
     }
-    val intervalLabel = formatIntervalKorean(item.cycleDays)
-    val lastDoneLabel = latestRecordDate?.let { " · 지난번 ${it.format(KOREAN_MONTH_DAY)}" } ?: ""
-    return "$intervalLabel$lastDoneLabel"
+    return formatIntervalKorean(item.cycleDays)
 }
 
 // cycleDays를 "1년마다"/"6개월마다"/"40일마다"처럼 깔끔하게 나눠지는 가장 큰 단위 하나로 표현한다.

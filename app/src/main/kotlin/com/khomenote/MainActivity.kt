@@ -254,6 +254,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                         container.assetRepository,
                         container.consumableItemRepository,
                         container.repairRecordRepository,
+                        container.categoryRepository,
                         screen.assetId,
                     ),
                     key = "asset-detail-${screen.assetId}",
@@ -263,6 +264,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     onAddItem = { push(Screen.ItemForm(screen.assetId, null)) },
                     onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
                     onEditItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },
+                    onEditAsset = { push(Screen.AssetForm(screen.assetId)) },
                     onBack = { pop() },
                     startWithOneTimeForm = screen.openOneTimeForm,
                 )

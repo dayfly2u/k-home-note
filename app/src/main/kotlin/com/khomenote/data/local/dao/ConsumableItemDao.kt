@@ -60,4 +60,22 @@ interface ConsumableItemDao {
         """
     )
     fun getWithStatusById(itemId: Long): Flow<ConsumableItemWithStatus?>
+
+    // 대상 상세 화면용 — 표시 순서(sortOrder)를 그대로 유지하면서 다음 예정일 계산에 쓸 최근 완료일도 함께 가져온다.
+    @Query(
+        """
+        SELECT
+            ci.*,
+            a.name AS assetName,
+            a.categoryId AS categoryId,
+            MAX(rr.date) AS latestRecordDate
+        FROM consumable_items ci
+        INNER JOIN assets a ON a.id = ci.assetId
+        LEFT JOIN replacement_records rr ON rr.consumableItemId = ci.id
+        WHERE ci.assetId = :assetId
+        GROUP BY ci.id
+        ORDER BY ci.sortOrder ASC, ci.id ASC
+        """
+    )
+    fun getWithStatusByAsset(assetId: Long): Flow<List<ConsumableItemWithStatus>>
 }
