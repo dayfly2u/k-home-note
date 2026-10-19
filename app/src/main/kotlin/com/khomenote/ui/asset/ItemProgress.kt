@@ -1,6 +1,19 @@
 package com.khomenote.ui.asset
 
+import androidx.compose.ui.graphics.Color
 import com.khomenote.data.local.entity.ConsumableItemEntity
+import com.khomenote.ui.home.DueBand
+import com.khomenote.ui.theme.OrangeUrgent
+import com.khomenote.ui.theme.TealPrimary
+
+/** 진행 막대/링 색 — D-day 구간 색(brief 2.5)과 같은 단계로 맞춘다. */
+internal fun progressBarColor(band: DueBand): Color = when (band) {
+    DueBand.OVERDUE -> OrangeUrgent
+    DueBand.DUE_SOON -> Color(0xFFE0702A)
+    DueBand.WITHIN_MONTH -> TealPrimary
+    DueBand.WITHIN_3_MONTHS -> Color(0xFF7FA7AA)
+    DueBand.LATER -> Color(0xFFC3CFCF)
+}
 
 /**
  * 대상 상세의 주기성작업 진행 막대 길이 계산용 "한 주기의 길이(일)".

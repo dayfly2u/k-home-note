@@ -23,11 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,17 +62,16 @@ import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.ui.common.MoreBelowIndicator
+import com.khomenote.ui.common.RowMoreMenu
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
-import com.khomenote.ui.home.DueBand
 import com.khomenote.ui.home.dDayStyle
 import com.khomenote.ui.home.dueBandFor
 import com.khomenote.ui.home.formatCycleLabel
 import com.khomenote.ui.theme.CardBorder
 import com.khomenote.ui.theme.NumberFontFamily
 import com.khomenote.ui.theme.OnceTagBorder
-import com.khomenote.ui.theme.OrangeUrgent
 import com.khomenote.ui.theme.RowDivider
 import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TealPrimary
@@ -96,12 +92,6 @@ import java.util.Locale
 private val ROW_HEIGHT = 72.dp
 private const val VISIBLE_ITEM_ROWS = 5
 private const val VISIBLE_REPAIR_ROWS = 3
-
-// 구매/교체 이력 화면(ItemDetailScreen)이 아직 쓰는 연한녹색 구간 제목 색.
-val SECTION_TITLE_COLOR = Color(0xFFC8E6C9)
-val SECTION_TITLE_TEXT_COLOR = Color(0xFF2E7D32)
-
-private val MORE_ICON_COLOR = Color(0xFF8D9A9B)
 
 data class AssetDetailUiState(
     val asset: AssetEntity? = null,
@@ -165,14 +155,6 @@ class AssetDetailViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         AssetDetailViewModel(assetRepository, consumableItemRepository, repairRecordRepository, categoryRepository, assetId) as T
-}
-
-private fun progressBarColor(band: DueBand): Color = when (band) {
-    DueBand.OVERDUE -> OrangeUrgent
-    DueBand.DUE_SOON -> Color(0xFFE0702A)
-    DueBand.WITHIN_MONTH -> TealPrimary
-    DueBand.WITHIN_3_MONTHS -> Color(0xFF7FA7AA)
-    DueBand.LATER -> Color(0xFFC3CFCF)
 }
 
 private fun repairSubtitle(record: RepairRecordEntity): String {
@@ -552,20 +534,6 @@ private fun DDayBadge(text: String, background: Color, textColor: Color) {
         contentAlignment = Alignment.Center,
     ) {
         Text(text, fontFamily = NumberFontFamily, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = textColor)
-    }
-}
-
-@Composable
-private fun RowMoreMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }, modifier = Modifier.size(width = 36.dp, height = 44.dp)) {
-            Icon(Icons.Default.MoreVert, contentDescription = "더보기", tint = MORE_ICON_COLOR, modifier = Modifier.size(18.dp))
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text("수정") }, onClick = { expanded = false; onEdit() })
-            DropdownMenuItem(text = { Text("삭제") }, onClick = { expanded = false; onDelete() })
-        }
     }
 }
 

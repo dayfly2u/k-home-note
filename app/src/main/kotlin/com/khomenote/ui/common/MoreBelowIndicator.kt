@@ -21,8 +21,14 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun MoreBelowIndicator(listState: LazyListState, modifier: Modifier = Modifier) {
+    MoreBelowIndicator(visible = listState.canScrollForward, modifier = modifier)
+}
+
+/** LazyColumn이 아니라 `verticalScroll` 페이지 전체를 감쌀 때 — `ScrollState.canScrollForward`를 넘긴다. */
+@Composable
+fun MoreBelowIndicator(visible: Boolean, modifier: Modifier = Modifier) {
     AnimatedVisibility(
-        visible = listState.canScrollForward,
+        visible = visible,
         modifier = modifier,
         enter = fadeIn(),
         exit = fadeOut(),
