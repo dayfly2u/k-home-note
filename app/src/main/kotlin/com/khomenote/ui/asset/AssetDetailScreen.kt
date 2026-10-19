@@ -513,6 +513,8 @@ private fun RepairRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(ROW_HEIGHT)
+            // 아직 안 끝난(알림 켜진) 일회성작업은 가볍게 눌러도 "완료로 표시" 시트가 열린다.
+            .then(if (lead != null) Modifier.clickable(onClick = onComplete) else Modifier)
             .topDivider(showTopDivider)
             .padding(start = 14.dp, end = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),

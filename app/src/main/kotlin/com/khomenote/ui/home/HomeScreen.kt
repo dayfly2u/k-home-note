@@ -476,15 +476,16 @@ fun HomeScreen(
                                     if (index > 0) HorizontalDivider(color = RowDivider)
                                     HomeRow(
                                         uiModel = uiModel,
+                                        // 일회성작업은 가볍게 누르면 바로 "완료로 표시" 시트가 열린다.
                                         onClick = {
                                             when (uiModel) {
                                                 is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
-                                                is HomeRowUiModel.OneTime -> onOneTimeTaskClick(uiModel.record.record.assetId)
+                                                is HomeRowUiModel.OneTime -> completingOneTime = uiModel
                                             }
                                         },
-                                        // 일회성작업은 꾹 누르면 바로 "완료로 표시" 시트가 열린다.
+                                        // 대신 일회성작업의 대상 상세(수정/삭제)는 꾹 눌러서 간다.
                                         onLongClick = (uiModel as? HomeRowUiModel.OneTime)?.let { oneTime ->
-                                            { completingOneTime = oneTime }
+                                            { onOneTimeTaskClick(oneTime.record.record.assetId) }
                                         },
                                     )
                                 }
