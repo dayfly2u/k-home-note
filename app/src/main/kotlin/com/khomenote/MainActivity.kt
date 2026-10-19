@@ -200,12 +200,16 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                         container.consumableItemRepository,
                         container.repairRecordRepository,
                         container.categoryRepository,
+                        container.assetRepository,
                     ),
                 )
                 HomeScreen(
                     viewModel = vm,
                     onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
                     onOneTimeTaskClick = { assetId -> push(Screen.AssetDetail(assetId)) },
+                    onAddAsset = { push(Screen.AssetForm(null)) },
+                    onAddRecurringItem = { assetId -> push(Screen.ItemForm(assetId, null)) },
+                    onAddOneTimeTask = { assetId -> push(Screen.AssetDetail(assetId, openOneTimeForm = true)) },
                 )
             }
 
@@ -260,6 +264,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
                     onEditItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },
                     onBack = { pop() },
+                    startWithOneTimeForm = screen.openOneTimeForm,
                 )
             }
 

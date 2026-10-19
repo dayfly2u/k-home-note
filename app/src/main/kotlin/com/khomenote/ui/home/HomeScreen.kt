@@ -33,7 +33,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,9 +50,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.khomenote.data.local.dto.AssetWithCategory
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.dto.RepairRecordWithAsset
 import com.khomenote.data.local.entity.CategoryEntity
+import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
@@ -117,9 +121,14 @@ class HomeViewModel(
     private val consumableItemRepository: ConsumableItemRepository,
     private val repairRecordRepository: RepairRecordRepository,
     categoryRepository: CategoryRepository,
+    assetRepository: AssetRepository,
 ) : ViewModel() {
 
     val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** 헤더 "+" 시트에서 작업을 추가할 대상을 고를 때 쓴다. */
+    val assets: StateFlow<List<AssetWithCategory>> = assetRepository.getAllWithCategory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // remember{}로 화면(Composable)에만 두면 항목 클릭 후 뒤로 왔을 때 화면이
@@ -169,10 +178,11 @@ class HomeViewModelFactory(
     private val consumableItemRepository: ConsumableItemRepository,
     private val repairRecordRepository: RepairRecordRepository,
     private val categoryRepository: CategoryRepository,
+    private val assetRepository: AssetRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        HomeViewModel(consumableItemRepository, repairRecordRepository, categoryRepository) as T
+        HomeViewModel(consumableItemRepository, repairRecordRepository, categoryRepository, assetRepository) as T
 }
 
 private data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
@@ -348,21 +358,36 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onItemClick: (Long) -> Unit,
     onOneTimeTaskClick: (Long) -> Unit,
+    onAddAsset: () -> Unit,
+    onAddRecurringItem: (Long) -> Unit,
+    onAddOneTimeTask: (Long) -> Unit,
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
+    val assets by viewModel.assets.collectAsStateWithLifecycle()
+    var showAddSheet by remember { mutableStateOf(false) }
 
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.categoryId == categoryFilter }
     }
     val listState = rememberLazyListState()
 
+    if (showAddSheet) {
+        HomeAddSheet(
+            assets = assets,
+            onDismiss = { showAddSheet = false },
+            onAddAsset = { showAddSheet = false; onAddAsset() },
+            onAddRecurring = { assetId -> showAddSheet = false; onAddRecurringItem(assetId) },
+            onAddOneTime = { assetId -> showAddSheet = false; onAddOneTimeTask(assetId) },
+        )
+    }
+
     Scaffold(
         topBar = {
             HomeHeader(
                 summary = items.summaryCounts(),
-                onAddClick = { /* TODO: 대상 고르기 시트 — 후속 계획(2.2-b)에서 구현 */ },
+                onAddClick = { showAddSheet = true },
             )
         },
     ) { padding ->
@@ -387,7 +412,7 @@ fun HomeScreen(
             }
             if (filteredItems.isEmpty()) {
                 Text(
-                    "등록된 작업이 없습니다. \"모아보기\"에서 자산과 주기성작업/일회성작업을 먼저 추가하세요.",
+                    "등록된 작업이 없습니다. 오른쪽 위 \"+\" 버튼으로 주기성작업/일회성작업을 추가하세요.",
                     modifier = Modifier.padding(16.dp),
                 )
                 return@Scaffold

@@ -159,6 +159,7 @@ fun AssetDetailScreen(
     onItemClick: (Long) -> Unit,
     onEditItem: (Long) -> Unit,
     onBack: () -> Unit,
+    startWithOneTimeForm: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<ConsumableItemEntity?>(null) }
@@ -179,7 +180,7 @@ fun AssetDetailScreen(
     }
 
     val repairListState = rememberLazyListState()
-    var showRepairDialog by remember { mutableStateOf(false) }
+    var showRepairDialog by remember { mutableStateOf(startWithOneTimeForm) }
     var editingRepairRecord by remember { mutableStateOf<RepairRecordEntity?>(null) }
     var pendingDeleteRepair by remember { mutableStateOf<RepairRecordEntity?>(null) }
 
