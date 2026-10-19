@@ -218,6 +218,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     factory = AssetListViewModelFactory(
                         container.assetRepository,
                         container.consumableItemRepository,
+                        container.repairRecordRepository,
                         container.categoryRepository,
                     ),
                 )
@@ -225,7 +226,6 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     viewModel = vm,
                     onAddAsset = { push(Screen.AssetForm(null)) },
                     onAssetClick = { assetId -> push(Screen.AssetDetail(assetId)) },
-                    onEditAsset = { assetId -> push(Screen.AssetForm(assetId)) },
                 )
             }
 

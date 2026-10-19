@@ -6,6 +6,8 @@ import com.khomenote.data.local.entity.RepairRecordEntity
 import kotlinx.coroutines.flow.Flow
 
 class RepairRecordRepository(private val repairRecordDao: RepairRecordDao) {
+    fun getAll(): Flow<List<RepairRecordEntity>> = repairRecordDao.getAll()
+
     fun getByAsset(assetId: Long): Flow<List<RepairRecordEntity>> = repairRecordDao.getByAsset(assetId)
 
     fun getPendingReminders(): Flow<List<RepairRecordWithAsset>> = repairRecordDao.getPendingReminders()

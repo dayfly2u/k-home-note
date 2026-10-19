@@ -17,22 +17,19 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,27 +43,32 @@ import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
+import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.PillAddButton
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
+import com.khomenote.ui.home.dDayStyle
 import com.khomenote.ui.theme.BackgroundGray
 import com.khomenote.ui.theme.CardBorder
+import com.khomenote.ui.theme.NumberFontFamily
 import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TextFaint
 import com.khomenote.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 class AssetListViewModel(
     private val assetRepository: AssetRepository,
-    private val consumableItemRepository: ConsumableItemRepository,
+    consumableItemRepository: ConsumableItemRepository,
+    repairRecordRepository: RepairRecordRepository,
     categoryRepository: CategoryRepository,
 ) : ViewModel() {
     val assets: StateFlow<List<AssetWithCategory>> = assetRepository.getAllWithCategory()
@@ -74,6 +76,16 @@ class AssetListViewModel(
 
     val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** 카드마다 보여줄 "주기성 N · 일회성 M"과 가장 가까운 작업 (대상 id -> 요약). */
+    internal val summaries: StateFlow<Map<Long, AssetCardSummary>> = combine(
+        consumableItemRepository.getAllWithStatus(),
+        repairRecordRepository.getAll(),
+        assetRepository.getAll(),
+    ) { statuses, records, assetList ->
+        val today = LocalDate.now()
+        assetList.associate { it.id to summarizeAsset(it.id, statuses, records, today) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     // remember{}로 화면(Composable)에만 두면 다른 화면으로 넘어갔다가 뒤로 왔을 때
     // 화면이 다시 조립되며 필터가 초기화된다 — ViewModel에 둬서 화면을 나갔다 와도 유지되게 한다.
@@ -84,13 +96,6 @@ class AssetListViewModel(
         _categoryFilter.value = categoryId
     }
 
-    fun delete(asset: AssetWithCategory) {
-        viewModelScope.launch { assetRepository.delete(asset.asset) }
-    }
-
-    suspend fun hasItems(assetId: Long): Boolean =
-        consumableItemRepository.getByAsset(assetId).first().isNotEmpty()
-
     fun reorder(orderedAssets: List<AssetWithCategory>) {
         viewModelScope.launch { assetRepository.reorder(orderedAssets.map { it.asset }) }
     }
@@ -99,27 +104,24 @@ class AssetListViewModel(
 class AssetListViewModelFactory(
     private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
+    private val repairRecordRepository: RepairRecordRepository,
     private val categoryRepository: CategoryRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        AssetListViewModel(assetRepository, consumableItemRepository, categoryRepository) as T
+        AssetListViewModel(assetRepository, consumableItemRepository, repairRecordRepository, categoryRepository) as T
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssetListScreen(
     viewModel: AssetListViewModel,
     onAddAsset: () -> Unit,
     onAssetClick: (Long) -> Unit,
-    onEditAsset: (Long) -> Unit,
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
-    var pendingDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
-    var blockedDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
-    val scope = rememberCoroutineScope()
+    val summaries by viewModel.summaries.collectAsStateWithLifecycle()
 
     // 드래그 중에는 화면에 보이는 순서(displayAssets)를 직접 바꾸고, 드래그가
     // 끝나야 DB에 저장한다. Flow(assets)가 새로 값을 흘려보내도 드래그 중에는
@@ -146,40 +148,6 @@ fun AssetListScreen(
     )
     LaunchedEffect(assets) {
         if (dragState.draggingItemIndex == null) displayAssets = assets
-    }
-
-    fun requestDelete(asset: AssetWithCategory) {
-        scope.launch {
-            if (viewModel.hasItems(asset.asset.id)) {
-                blockedDelete = asset
-            } else {
-                pendingDelete = asset
-            }
-        }
-    }
-
-    pendingDelete?.let { asset ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("자산을 삭제할까요?") },
-            text = { Text("\"${asset.asset.name}\"이 삭제되며 되돌릴 수 없습니다.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.delete(asset)
-                    pendingDelete = null
-                }) { Text("삭제") }
-            },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("취소") } },
-        )
-    }
-
-    blockedDelete?.let { asset ->
-        AlertDialog(
-            onDismissRequest = { blockedDelete = null },
-            title = { Text("삭제할 수 없습니다") },
-            text = { Text("\"${asset.asset.name}\"에 등록된 주기성작업이 있습니다. 먼저 모두 삭제한 뒤 다시 시도해주세요.") },
-            confirmButton = { TextButton(onClick = { blockedDelete = null }) { Text("확인") } },
-        )
     }
 
     Scaffold(
@@ -236,6 +204,7 @@ fun AssetListScreen(
             Box(modifier = Modifier.weight(1f)) {
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     itemsIndexed(visibleAssets, key = { _, asset -> asset.asset.id }) { index, asset ->
+                        val summary = summaries[asset.asset.id] ?: AssetCardSummary.EMPTY
                         // 카드 사이 간격은 Arrangement.spacedBy 대신 항목 안쪽 패딩으로 둔다 — 드래그 재정렬이
                         // 항목 높이로 위치를 계산하므로 간격까지 항목 크기에 포함돼야 어긋나지 않는다.
                         Box(modifier = Modifier.dragElevation(index, dragState).padding(bottom = 10.dp)) {
@@ -263,22 +232,33 @@ fun AssetListScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    Text(asset.categoryName, fontSize = 12.sp, color = TextSecondary)
-                                    if (!asset.asset.memo.isNullOrBlank()) {
-                                        Text(
-                                            asset.asset.memo,
-                                            fontSize = 12.sp,
-                                            color = TextSecondary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
+                                    Text(cardCountsLabel(summary), fontSize = 12.sp, color = TextSecondary)
+                                    summary.nearest?.let { nearest ->
+                                        val dStyle = dDayStyle(nearest.daysUntilDue, nearest.reminderLeadDays)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                dStyle.text,
+                                                fontFamily = NumberFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = dStyle.textColor,
+                                                modifier = Modifier
+                                                    .background(dStyle.background, RoundedCornerShape(6.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 1.dp),
+                                            )
+                                            Text(
+                                                nearest.name,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF3A3F46),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
                                     }
                                 }
-                                TextButton(onClick = { onEditAsset(asset.asset.id) }) { Text("수정") }
-                                TextButton(onClick = { requestDelete(asset) }) { Text("삭제") }
                                 Text(
                                     "≡",
-                                    modifier = Modifier.dragHandle(index, dragState).padding(horizontal = 8.dp, vertical = 8.dp),
+                                    modifier = Modifier.dragHandle(index, dragState).padding(horizontal = 10.dp, vertical = 8.dp),
                                     style = MaterialTheme.typography.titleLarge,
                                     color = TextFaint,
                                 )
