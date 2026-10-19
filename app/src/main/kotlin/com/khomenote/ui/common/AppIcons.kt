@@ -30,4 +30,10 @@ object AppIcons {
 
     /** 위로 올리는 트레이 — 백업에서 복원 */
     val Upload: ImageVector by lazy { strokeIcon("Upload", "M12 15V3M7 8l5-5 5 5M4 17v3h16v-3") }
+
+    /** 줄 그어진 종 — 알림이 꺼짐 */
+    val BellOff: ImageVector by lazy { strokeIcon("BellOff", "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4M3 3l18 18") }
+
+    /** 원형 화살표 — 주기성작업으로 바꾸기 */
+    val Refresh: ImageVector by lazy { strokeIcon("Refresh", "M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7") }
 }

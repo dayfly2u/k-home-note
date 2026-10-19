@@ -10,6 +10,6 @@ sealed interface Screen {
     data class AssetDetail(val assetId: Long, val openOneTimeForm: Boolean = false) : Screen
     /** [assetId]는 새 항목을 만들 때만 필요하다. 수정([itemId]가 있는 경우)은
      * ItemFormViewModel이 기존 항목에서 assetId를 읽어오므로 null로 넘겨도 된다. */
-    data class ItemForm(val assetId: Long?, val itemId: Long?) : Screen
+    data class ItemForm(val assetId: Long?, val itemId: Long?, val presetName: String? = null) : Screen
     data class ItemDetail(val itemId: Long) : Screen
 }

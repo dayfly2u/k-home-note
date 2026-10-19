@@ -140,6 +140,14 @@ class AssetDetailViewModel(
         }
     }
 
+    /** "완료로 표시" — 실제 한 날·가격·메모를 반영하고 알림을 꺼서(reminderLeadDays = null) 홈에서 빼되 기록은 남긴다. */
+    fun completeRepairRecord(record: RepairRecordEntity, date: LocalDate, price: Long?, memo: String?) {
+        saveRepairRecord(
+            record,
+            RepairRecordInput(name = record.name, date = date, price = price, memo = memo, reminderLeadDays = null),
+        )
+    }
+
     fun deleteRepairRecord(record: RepairRecordEntity) {
         viewModelScope.launch { repairRecordRepository.delete(record) }
     }
@@ -175,6 +183,7 @@ fun AssetDetailScreen(
     onItemClick: (Long) -> Unit,
     onEditItem: (Long) -> Unit,
     onEditAsset: () -> Unit,
+    onConvertToRecurring: (name: String) -> Unit,
     onBack: () -> Unit,
     startWithOneTimeForm: Boolean = false,
 ) {
@@ -200,6 +209,7 @@ fun AssetDetailScreen(
     val repairListState = rememberLazyListState()
     var showRepairDialog by remember { mutableStateOf(startWithOneTimeForm) }
     var editingRepairRecord by remember { mutableStateOf<RepairRecordEntity?>(null) }
+    var completingRepairRecord by remember { mutableStateOf<RepairRecordEntity?>(null) }
     var pendingDeleteRepair by remember { mutableStateOf<RepairRecordEntity?>(null) }
 
     pendingDelete?.let { item ->
@@ -217,9 +227,12 @@ fun AssetDetailScreen(
         )
     }
 
+    val assetLabel = asset?.let { "${uiState.category?.emoji.orEmpty()} ${it.name}".trim() }
+
     if (showRepairDialog) {
-        RepairRecordDialog(
+        RepairRecordSheet(
             initial = null,
+            assetLabel = assetLabel,
             onDismiss = { showRepairDialog = false },
             onSave = { input ->
                 viewModel.saveRepairRecord(null, input)
@@ -229,12 +242,29 @@ fun AssetDetailScreen(
     }
 
     editingRepairRecord?.let { target ->
-        RepairRecordDialog(
+        RepairRecordSheet(
             initial = target,
+            assetLabel = assetLabel,
             onDismiss = { editingRepairRecord = null },
             onSave = { input ->
                 viewModel.saveRepairRecord(target, input)
                 editingRepairRecord = null
+            },
+        )
+    }
+
+    completingRepairRecord?.let { target ->
+        OneTimeDoneSheet(
+            record = target,
+            assetName = asset?.name.orEmpty(),
+            onDismiss = { completingRepairRecord = null },
+            onComplete = { date, price, memo ->
+                viewModel.completeRepairRecord(target, date, price, memo)
+                completingRepairRecord = null
+            },
+            onConvertToRecurring = { name ->
+                completingRepairRecord = null
+                onConvertToRecurring(name)
             },
         )
     }
@@ -366,6 +396,7 @@ fun AssetDetailScreen(
                                     record = record,
                                     today = today,
                                     showTopDivider = index > 0,
+                                    onComplete = { completingRepairRecord = record },
                                     onEdit = { editingRepairRecord = record },
                                     onDelete = { pendingDeleteRepair = record },
                                 )
@@ -473,6 +504,7 @@ private fun RepairRow(
     record: RepairRecordEntity,
     today: LocalDate,
     showTopDivider: Boolean,
+    onComplete: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -519,7 +551,8 @@ private fun RepairRow(
             val dStyle = dDayStyle(DueDateCalculator.daysUntilDue(record.date, today), lead)
             DDayBadge(dStyle.text, dStyle.background, dStyle.textColor)
         }
-        RowMoreMenu(onEdit = onEdit, onDelete = onDelete)
+        // 알림이 켜진(= 아직 끝나지 않은) 일회성작업만 "완료로 표시" 메뉴가 있다.
+        RowMoreMenu(onEdit = onEdit, onDelete = onDelete, onComplete = if (lead != null) onComplete else null)
     }
 }
 

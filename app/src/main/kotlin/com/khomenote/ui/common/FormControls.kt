@@ -1,10 +1,12 @@
 package com.khomenote.ui.common
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +30,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -44,8 +47,48 @@ import com.khomenote.ui.theme.TealPrimary
 import com.khomenote.ui.theme.TextFaint
 import com.khomenote.ui.theme.TextPrimary
 import com.khomenote.ui.theme.TextSecondary
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 // 시안(ItemForm.dc.html) 입력 컨트롤 — 포커스되면 청록 1.5dp 테두리, 아니면 회색 1dp 테두리.
+
+/** 입력 칸 위에 붙는 작은 라벨(12sp 굵게 보조색). */
+@Composable
+fun FormLabel(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier = modifier, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+}
+
+private val DATE_FIELD_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd (E)", Locale.KOREAN)
+
+/** 날짜 선택 칸 — 누르면 시스템 날짜 선택 창이 뜨고, "2026-10-22 (목)"처럼 요일까지 보여준다. */
+@Composable
+fun DateField(label: String, date: LocalDate, onDateChange: (LocalDate) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val shape = RoundedCornerShape(14.dp)
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        FormLabel(label)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(shape)
+                .background(SurfaceWhite)
+                .border(1.dp, ChipBorderUnselected, shape)
+                .clickable {
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, day -> onDateChange(LocalDate.of(year, month + 1, day)) },
+                        date.year, date.monthValue - 1, date.dayOfMonth,
+                    ).show()
+                }
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(date.format(DATE_FIELD_FORMAT), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+        }
+    }
+}
 
 /** 한 줄(또는 [singleLine]=false면 여러 줄) 텍스트 입력. 높이 48dp, 모서리 14dp. */
 @Composable
@@ -55,6 +98,7 @@ fun KTextField(
     placeholder: String,
     modifier: Modifier = Modifier,
     singleLine: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Text,
 ) {
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(14.dp)
@@ -72,6 +116,7 @@ fun KTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = singleLine,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             textStyle = TextStyle(fontSize = 16.sp, color = TextPrimary),
             cursorBrush = SolidColor(TealPrimary),
             modifier = Modifier

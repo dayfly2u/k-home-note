@@ -209,6 +209,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     onAddAsset = { push(Screen.AssetForm(null)) },
                     onAddRecurringItem = { assetId -> push(Screen.ItemForm(assetId, null)) },
                     onAddOneTimeTask = { assetId -> push(Screen.AssetDetail(assetId, openOneTimeForm = true)) },
+                    onConvertToRecurring = { assetId, name -> push(Screen.ItemForm(assetId, null, name)) },
                 )
             }
 
@@ -260,6 +261,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
                     onEditItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },
                     onEditAsset = { push(Screen.AssetForm(screen.assetId)) },
+                    onConvertToRecurring = { name -> push(Screen.ItemForm(screen.assetId, null, name)) },
                     onBack = { pop() },
                     startWithOneTimeForm = screen.openOneTimeForm,
                 )
@@ -273,6 +275,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                         container.categoryRepository,
                         screen.assetId,
                         screen.itemId,
+                        screen.presetName,
                     ),
                     key = "item-form-${System.identityHashCode(screen)}",
                 )

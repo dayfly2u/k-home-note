@@ -85,8 +85,10 @@ class ItemFormViewModel(
     private val categoryRepository: CategoryRepository,
     assetIdForNew: Long?,
     private val itemId: Long?,
+    presetName: String? = null,
 ) : ViewModel() {
-    var name by mutableStateOf("")
+    // 일회성작업을 "주기성작업으로 바꾸기"로 넘어온 경우 그 이름을 미리 채워 둔다.
+    var name by mutableStateOf(presetName.orEmpty())
         private set
     var cycleMode by mutableStateOf(CycleMode.INTERVAL)
         private set
@@ -272,10 +274,11 @@ class ItemFormViewModelFactory(
     private val categoryRepository: CategoryRepository,
     private val assetIdForNew: Long?,
     private val itemId: Long?,
+    private val presetName: String? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        ItemFormViewModel(consumableItemRepository, assetRepository, categoryRepository, assetIdForNew, itemId) as T
+        ItemFormViewModel(consumableItemRepository, assetRepository, categoryRepository, assetIdForNew, itemId, presetName) as T
 }
 
 private val PREVIEW_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN)

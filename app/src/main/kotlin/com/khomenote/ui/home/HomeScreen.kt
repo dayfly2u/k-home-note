@@ -1,8 +1,10 @@
 package com.khomenote.ui.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,11 +56,13 @@ import com.khomenote.data.local.dto.AssetWithCategory
 import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.dto.RepairRecordWithAsset
 import com.khomenote.data.local.entity.CategoryEntity
+import com.khomenote.data.local.entity.RepairRecordEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
+import com.khomenote.ui.asset.OneTimeDoneSheet
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.theme.CardBorder
@@ -80,6 +84,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -130,6 +135,13 @@ class HomeViewModel(
     /** 헤더 "+" 시트에서 작업을 추가할 대상을 고를 때 쓴다. */
     val assets: StateFlow<List<AssetWithCategory>> = assetRepository.getAllWithCategory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** 일회성작업 "완료로 표시" — 한 날·가격·메모를 반영하고 알림을 꺼서(reminderLeadDays = null) 홈에서 뺀다. 기록은 대상 상세에 남는다. */
+    fun completeOneTime(record: RepairRecordEntity, date: LocalDate, price: Long?, memo: String?) {
+        viewModelScope.launch {
+            repairRecordRepository.save(record.copy(date = date, price = price, memo = memo, reminderLeadDays = null))
+        }
+    }
 
     // remember{}로 화면(Composable)에만 두면 항목 클릭 후 뒤로 왔을 때 화면이
     // 다시 조립되며 필터가 초기화된다 — ViewModel에 둬서 화면을 나갔다 와도 유지되게 한다.
@@ -293,8 +305,9 @@ private fun HomeSummaryTile(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit) {
+private fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit, onLongClick: (() -> Unit)? = null) {
     val subtitle = when (uiModel) {
         is HomeRowUiModel.Recurring -> formatRecurringSubtitle(uiModel.status.item, uiModel.status.latestRecordDate)
         is HomeRowUiModel.OneTime -> formatOneTimeSubtitle(uiModel.record.record)
@@ -303,7 +316,7 @@ private fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -361,12 +374,14 @@ fun HomeScreen(
     onAddAsset: () -> Unit,
     onAddRecurringItem: (Long) -> Unit,
     onAddOneTimeTask: (Long) -> Unit,
+    onConvertToRecurring: (assetId: Long, name: String) -> Unit,
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     var showAddSheet by remember { mutableStateOf(false) }
+    var completingOneTime by remember { mutableStateOf<HomeRowUiModel.OneTime?>(null) }
 
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.categoryId == categoryFilter }
@@ -380,6 +395,22 @@ fun HomeScreen(
             onAddAsset = { showAddSheet = false; onAddAsset() },
             onAddRecurring = { assetId -> showAddSheet = false; onAddRecurringItem(assetId) },
             onAddOneTime = { assetId -> showAddSheet = false; onAddOneTimeTask(assetId) },
+        )
+    }
+
+    completingOneTime?.let { target ->
+        OneTimeDoneSheet(
+            record = target.record.record,
+            assetName = target.assetName,
+            onDismiss = { completingOneTime = null },
+            onComplete = { date, price, memo ->
+                viewModel.completeOneTime(target.record.record, date, price, memo)
+                completingOneTime = null
+            },
+            onConvertToRecurring = { name ->
+                completingOneTime = null
+                onConvertToRecurring(target.record.record.assetId, name)
+            },
         )
     }
 
@@ -443,12 +474,19 @@ fun HomeScreen(
                             ) {
                                 rowsInBand.forEachIndexed { index, uiModel ->
                                     if (index > 0) HorizontalDivider(color = RowDivider)
-                                    HomeRow(uiModel) {
-                                        when (uiModel) {
-                                            is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
-                                            is HomeRowUiModel.OneTime -> onOneTimeTaskClick(uiModel.record.record.assetId)
-                                        }
-                                    }
+                                    HomeRow(
+                                        uiModel = uiModel,
+                                        onClick = {
+                                            when (uiModel) {
+                                                is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
+                                                is HomeRowUiModel.OneTime -> onOneTimeTaskClick(uiModel.record.record.assetId)
+                                            }
+                                        },
+                                        // 일회성작업은 꾹 누르면 바로 "완료로 표시" 시트가 열린다.
+                                        onLongClick = (uiModel as? HomeRowUiModel.OneTime)?.let { oneTime ->
+                                            { completingOneTime = oneTime }
+                                        },
+                                    )
                                 }
                             }
                         }
