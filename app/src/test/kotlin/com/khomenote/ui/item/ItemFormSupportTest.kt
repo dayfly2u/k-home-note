@@ -8,22 +8,22 @@ class ItemFormSupportTest {
 
     @Test
     fun `알림 7일 전은 7일 3일 1일 전 시점을 보여준다`() {
-        assertEquals("7일 전, 3일 전, 1일 전 아침 8시에 알림이 와요", reminderExplanation(7, 8))
+        assertEquals("7일 전, 3일 전, 1일 전 오전 8:00에 알림이 와요", reminderExplanation(7, "오전 8:00"))
     }
 
     @Test
     fun `알림 14일 전은 14 7 3 1일 전 시점을 보여준다`() {
-        assertEquals("14일 전, 7일 전, 3일 전, 1일 전 아침 8시에 알림이 와요", reminderExplanation(14, 8))
+        assertEquals("14일 전, 7일 전, 3일 전, 1일 전 오전 8:00에 알림이 와요", reminderExplanation(14, "오전 8:00"))
     }
 
     @Test
     fun `알림 1일 전은 하루 전 한 번만 보여준다`() {
-        assertEquals("1일 전 아침 8시에 알림이 와요", reminderExplanation(1, 8))
+        assertEquals("1일 전 오후 9:30에 알림이 와요", reminderExplanation(1, "오후 9:30"))
     }
 
     @Test
     fun `알림 0일은 당일 알림이다`() {
-        assertEquals("당일 아침 8시에 알림이 와요", reminderExplanation(0, 8))
+        assertEquals("당일 오전 8:00에 알림이 와요", reminderExplanation(0, "오전 8:00"))
     }
 
     @Test

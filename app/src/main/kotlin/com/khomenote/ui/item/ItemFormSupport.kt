@@ -24,11 +24,11 @@ internal val QUICK_PICKS = listOf(
     QuickPick("자동차보험 · 매년", "자동차보험 갱신", CycleMode.YEARLY, reminderLeadDays = 30),
 )
 
-/** "7일 전, 3일 전, 1일 전 아침 8시에 알림이 와요" — 실제 알림 시점(ReminderTargetSelector)을 그대로 보여준다. */
-internal fun reminderExplanation(leadDays: Int, hour: Int): String {
-    if (leadDays <= 0) return "당일 아침 ${hour}시에 알림이 와요"
+/** "7일 전, 3일 전, 1일 전 오전 8:00에 알림이 와요" — 실제 알림 시점(ReminderTargetSelector)과 설정의 확인 시각을 그대로 보여준다. */
+internal fun reminderExplanation(leadDays: Int, timeLabel: String): String {
+    if (leadDays <= 0) return "당일 ${timeLabel}에 알림이 와요"
     val points = ReminderTargetSelector.reminderMilestones(leadDays).joinToString(", ") { "${it}일 전" }
-    return "$points 아침 ${hour}시에 알림이 와요"
+    return "$points ${timeLabel}에 알림이 와요"
 }
 
 /** 다음 날짜 미리보기 카드의 보조 설명 한 줄. */

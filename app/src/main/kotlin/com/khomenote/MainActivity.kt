@@ -52,9 +52,6 @@ import com.khomenote.ui.asset.AssetFormViewModelFactory
 import com.khomenote.ui.asset.AssetListScreen
 import com.khomenote.ui.asset.AssetListViewModel
 import com.khomenote.ui.asset.AssetListViewModelFactory
-import com.khomenote.ui.category.CategoryManagementScreen
-import com.khomenote.ui.category.CategoryManagementViewModel
-import com.khomenote.ui.category.CategoryManagementViewModelFactory
 import com.khomenote.ui.home.HomeScreen
 import com.khomenote.ui.home.HomeViewModel
 import com.khomenote.ui.home.HomeViewModelFactory
@@ -66,6 +63,8 @@ import com.khomenote.ui.item.ItemFormViewModel
 import com.khomenote.ui.item.ItemFormViewModelFactory
 import com.khomenote.ui.navigation.Screen
 import com.khomenote.ui.settings.SettingsScreen
+import com.khomenote.ui.settings.SettingsViewModel
+import com.khomenote.ui.settings.SettingsViewModelFactory
 import com.khomenote.ui.theme.KHomeNoteTheme
 
 class MainActivity : ComponentActivity() {
@@ -230,14 +229,10 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
             }
 
             is Screen.Settings -> {
-                SettingsScreen(onManageCategories = { push(Screen.CategoryManagement) })
-            }
-
-            is Screen.CategoryManagement -> {
-                val vm = viewModel<CategoryManagementViewModel>(
-                    factory = CategoryManagementViewModelFactory(container.categoryRepository),
+                val vm = viewModel<SettingsViewModel>(
+                    factory = SettingsViewModelFactory(container.categoryRepository, container.assetRepository),
                 )
-                CategoryManagementScreen(viewModel = vm, onBack = { pop() })
+                SettingsScreen(viewModel = vm)
             }
 
             is Screen.AssetForm -> {

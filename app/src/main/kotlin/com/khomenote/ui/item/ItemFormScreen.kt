@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +51,7 @@ import com.khomenote.ui.common.NumberBox
 import com.khomenote.ui.common.RadioSegment
 import com.khomenote.ui.common.SegmentedTabs
 import com.khomenote.ui.common.StepperButton
+import com.khomenote.ui.common.formatReminderTime
 import com.khomenote.ui.home.dDayStyle
 import com.khomenote.ui.theme.CardBorder
 import com.khomenote.ui.theme.ChipBorderUnselected
@@ -426,7 +428,8 @@ fun ItemFormScreen(
                     }
                     StepperButton("+", "하루 늘리기") { viewModel.stepReminderLeadDays(1) }
                 }
-                Hint(reminderExplanation(viewModel.reminderLeadDays, ReminderScheduler.DEFAULT_HOUR))
+                val (alertHour, alertMinute) = ReminderScheduler.getTime(LocalContext.current)
+                Hint(reminderExplanation(viewModel.reminderLeadDays, formatReminderTime(alertHour, alertMinute)))
             }
 
             viewModel.previewNextDueDate?.let { next ->

@@ -5,7 +5,6 @@ sealed interface Screen {
     data object Home : Screen
     data object AssetList : Screen
     data object Settings : Screen
-    data object CategoryManagement : Screen
     data class AssetForm(val assetId: Long?) : Screen
     /** [openOneTimeForm]이 true면 들어가자마자 일회성작업 추가 다이얼로그를 연다(홈 "+" 시트에서 진입할 때). */
     data class AssetDetail(val assetId: Long, val openOneTimeForm: Boolean = false) : Screen

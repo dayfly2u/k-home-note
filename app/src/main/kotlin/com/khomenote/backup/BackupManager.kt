@@ -6,6 +6,9 @@ import android.net.Uri
 import com.khomenote.data.local.AppDatabase
 import java.io.File
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 
@@ -21,6 +24,15 @@ object BackupManager {
     private const val DB_NAME = "k_home_note.db"
     private const val SQLITE_HEADER = "SQLite format 3\u0000" // 파일 첫 16바이트
 
+    private const val PREFS_NAME = "backup_prefs"
+    private const val KEY_LAST_BACKUP_AT = "last_backup_at"
+
+    /** 마지막으로 백업에 성공한 날짜(이 기기 기준). 한 번도 안 했으면 null. */
+    fun lastBackupDate(context: Context): LocalDate? {
+        val millis = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getLong(KEY_LAST_BACKUP_AT, 0L)
+        return if (millis == 0L) null else Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+    }
+
     fun backupFileName(): String {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         return "k_home_note_backup_$timestamp.db"
@@ -35,6 +47,10 @@ object BackupManager {
         context.contentResolver.openOutputStream(destination)?.use { output ->
             dbFile.inputStream().use { input -> input.copyTo(output) }
         } ?: error("백업 파일을 열 수 없습니다.")
+
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putLong(KEY_LAST_BACKUP_AT, System.currentTimeMillis())
+            .apply()
     }
 
     /**
