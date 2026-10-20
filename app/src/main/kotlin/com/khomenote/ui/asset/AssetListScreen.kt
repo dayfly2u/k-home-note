@@ -170,7 +170,7 @@ fun AssetListScreen(
     ) { padding ->
         if (displayAssets.isEmpty()) {
             Text(
-                "등록된 자산이 없습니다. \"대상 추가\" 버튼을 눌러 추가하세요.",
+                "등록된 대상이 없습니다. \"대상 추가\" 버튼을 눌러 추가하세요.",
                 modifier = Modifier.padding(padding).padding(16.dp),
             )
             return@Scaffold
@@ -197,7 +197,7 @@ fun AssetListScreen(
             }
             if (visibleAssets.isEmpty()) {
                 Text(
-                    "해당 카테고리에 등록된 자산이 없습니다.",
+                    "해당 카테고리에 등록된 대상이 없습니다.",
                     modifier = Modifier.padding(16.dp),
                 )
             }

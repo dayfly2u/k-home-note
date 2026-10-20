@@ -253,7 +253,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         AlertDialog(
             onDismissRequest = { blockedDeleteCategory = null },
             title = { Text("삭제할 수 없습니다") },
-            text = { Text("\"${target.name}\" 카테고리를 사용 중인 자산이 있습니다. 먼저 해당 자산들의 카테고리를 바꾼 뒤 다시 시도해주세요.") },
+            text = { Text("\"${target.name}\" 카테고리를 사용 중인 대상이 있습니다. 먼저 해당 대상들의 카테고리를 바꾼 뒤 다시 시도해주세요.") },
             confirmButton = { TextButton(onClick = { blockedDeleteCategory = null }) { Text("확인") } },
         )
     }
