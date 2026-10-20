@@ -1,6 +1,7 @@
 package com.khomenote.ui.home
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -60,13 +61,17 @@ import com.khomenote.data.local.dto.ConsumableItemWithStatus
 import com.khomenote.data.local.dto.RepairRecordWithAsset
 import com.khomenote.data.local.entity.CategoryEntity
 import com.khomenote.data.local.entity.RepairRecordEntity
+import com.khomenote.data.local.entity.ReplacementRecordEntity
 import com.khomenote.data.repository.AssetRepository
 import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
+import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
+import com.khomenote.photo.PhotoStorage
 import com.khomenote.ui.asset.OneTimeDoneSheet
 import com.khomenote.ui.common.AppIcons
+import com.khomenote.ui.item.ReplacementRecordSheet
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.theme.CardBorder
@@ -84,7 +89,9 @@ import com.khomenote.ui.theme.TealPrimary
 import com.khomenote.ui.theme.TealPrimaryDark
 import com.khomenote.ui.theme.TextFaint
 import com.khomenote.ui.theme.TextSecondary
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -132,7 +139,36 @@ class HomeViewModel(
     private val repairRecordRepository: RepairRecordRepository,
     categoryRepository: CategoryRepository,
     assetRepository: AssetRepository,
+    private val replacementRecordRepository: ReplacementRecordRepository,
+    private val photoStorage: PhotoStorage,
 ) : ViewModel() {
+
+    /** 홈에서 바로 "완료 기록"을 남길 때, 다음 예정일 미리보기에 쓸 그 작업의 기존 기록 날짜들. */
+    suspend fun recordDatesFor(itemId: Long): List<LocalDate> =
+        replacementRecordRepository.getByItem(itemId).first().map { it.date }
+
+    /** 상세 화면의 "완료 기록하기"와 같은 저장 경로. */
+    fun recordReplacement(itemId: Long, date: LocalDate, price: Long?, vendor: String?, photoUri: String?, memo: String?) {
+        viewModelScope.launch {
+            replacementRecordRepository.add(
+                ReplacementRecordEntity(
+                    consumableItemId = itemId,
+                    date = date,
+                    price = price,
+                    vendor = vendor,
+                    photoUri = photoUri,
+                    memo = memo,
+                )
+            )
+        }
+    }
+
+    suspend fun pickPhoto(uri: Uri): String? = photoStorage.copyToInternalStorage(uri)
+
+    fun discardPhoto(path: String) {
+        viewModelScope.launch(Dispatchers.IO) { photoStorage.deletePhoto(path) }
+    }
+
 
     val categories: StateFlow<List<CategoryEntity>> = categoryRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -196,10 +232,15 @@ class HomeViewModelFactory(
     private val repairRecordRepository: RepairRecordRepository,
     private val categoryRepository: CategoryRepository,
     private val assetRepository: AssetRepository,
+    private val replacementRecordRepository: ReplacementRecordRepository,
+    private val photoStorage: PhotoStorage,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        HomeViewModel(consumableItemRepository, repairRecordRepository, categoryRepository, assetRepository) as T
+        HomeViewModel(
+            consumableItemRepository, repairRecordRepository, categoryRepository, assetRepository,
+            replacementRecordRepository, photoStorage,
+        ) as T
 }
 
 internal data class DDayStyle(val text: String, val background: Color, val textColor: Color, val large: Boolean)
@@ -438,6 +479,12 @@ fun HomeScreen(
         }
     }
     var completingOneTime by remember { mutableStateOf<HomeRowUiModel.OneTime?>(null) }
+    var recordingRecurring by remember { mutableStateOf<HomeRowUiModel.Recurring?>(null) }
+    var recordingOtherDates by remember { mutableStateOf<List<LocalDate>?>(null) }
+    LaunchedEffect(recordingRecurring) {
+        val target = recordingRecurring
+        recordingOtherDates = if (target == null) null else viewModel.recordDatesFor(target.status.item.id)
+    }
 
     // 목록/달력 보기 선택은 앱을 껐다 켜도 유지한다(DB가 아니라 가벼운 설정값이라 SharedPreferences).
     val context = LocalContext.current
@@ -460,8 +507,11 @@ fun HomeScreen(
             is HomeRowUiModel.OneTime -> completingOneTime = uiModel
         }
     }
-    fun rowLongClick(uiModel: HomeRowUiModel): (() -> Unit)? =
-        (uiModel as? HomeRowUiModel.OneTime)?.let { oneTime -> { onOneTimeTaskClick(oneTime.record.record.assetId) } }
+    // 꾹 누르기: 주기성작업은 바로 "완료 기록" 시트, 일회성작업은 그 대상의 상세(수정/삭제).
+    fun rowLongClick(uiModel: HomeRowUiModel): (() -> Unit)? = when (uiModel) {
+        is HomeRowUiModel.Recurring -> ({ recordingRecurring = uiModel })
+        is HomeRowUiModel.OneTime -> ({ onOneTimeTaskClick(uiModel.record.record.assetId) })
+    }
 
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.categoryId == categoryFilter }
@@ -477,6 +527,25 @@ fun HomeScreen(
             onAddRecurring = { assetId -> showAddSheet = false; onAddRecurringItem(assetId) },
             onAddOneTime = { assetId -> showAddSheet = false; onAddOneTimeTask(assetId) },
         )
+    }
+
+    recordingRecurring?.let { target ->
+        // 기존 기록 날짜를 읽어 오는 동안(아주 짧다)은 시트를 띄우지 않는다.
+        recordingOtherDates?.let { otherDates ->
+            ReplacementRecordSheet(
+                item = target.status.item,
+                assetName = target.assetName,
+                categoryEmoji = categories.firstOrNull { it.id == target.categoryId }?.emoji.orEmpty(),
+                otherRecordDates = otherDates,
+                onDismiss = { recordingRecurring = null },
+                onSave = { input ->
+                    viewModel.recordReplacement(target.status.item.id, input.date, input.price, input.vendor, input.photoUri, input.memo)
+                    recordingRecurring = null
+                },
+                onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+                onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
+            )
+        }
     }
 
     completingOneTime?.let { target ->

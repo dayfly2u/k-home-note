@@ -205,6 +205,8 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                         container.repairRecordRepository,
                         container.categoryRepository,
                         container.assetRepository,
+                        container.replacementRecordRepository,
+                        container.photoStorage,
                     ),
                 )
                 HomeScreen(
