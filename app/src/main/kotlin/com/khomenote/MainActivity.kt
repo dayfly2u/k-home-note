@@ -242,7 +242,18 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     factory = AssetFormViewModelFactory(container.assetRepository, container.categoryRepository, screen.assetId),
                     key = "asset-form-${System.identityHashCode(screen)}",
                 )
-                AssetFormScreen(viewModel = vm, isNew = screen.assetId == null, onSaved = { pop() }, onBack = { pop() })
+                AssetFormScreen(
+                    viewModel = vm,
+                    isNew = screen.assetId == null,
+                    onSaved = { savedId ->
+                        // 새 대상은 저장하면 바로 그 대상의 상세 화면으로 이어간다(주기성작업을 바로 추가할 수 있게).
+                        // 수정은 예전처럼 돌아가기만 한다.
+                        val wasNew = screen.assetId == null
+                        pop()
+                        if (wasNew) push(Screen.AssetDetail(savedId))
+                    },
+                    onBack = { pop() },
+                )
             }
 
             is Screen.AssetDetail -> {

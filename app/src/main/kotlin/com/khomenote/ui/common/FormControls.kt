@@ -26,7 +26,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -52,6 +56,15 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 // 시안(ItemForm.dc.html) 입력 컨트롤 — 포커스되면 청록 1.5dp 테두리, 아니면 회색 1dp 테두리.
+
+/** 점선 둥근 테두리(시안의 "+ 새 카테고리", 영수증 사진/메모 같은 보조 버튼용). */
+fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, width: Dp = 1.dp): Modifier = drawBehind {
+    drawRoundRect(
+        color = color,
+        cornerRadius = CornerRadius(cornerRadius.toPx()),
+        style = Stroke(width = width.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))),
+    )
+}
 
 /** 입력 칸 위에 붙는 작은 라벨(12sp 굵게 보조색). */
 @Composable
