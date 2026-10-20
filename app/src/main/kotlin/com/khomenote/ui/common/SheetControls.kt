@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.khomenote.ui.theme.ChipBorderUnselected
 import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TealPrimary
+import com.khomenote.ui.theme.TextPrimary
 
 /** 시안의 입력 바텀시트 틀 — 위 모서리 둥근 흰 시트 안에 스크롤 가능한 본문(키보드가 뜨면 같이 올라온다). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +53,34 @@ fun KModalSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Un
             verticalArrangement = Arrangement.spacedBy(14.dp),
             content = content,
         )
+    }
+}
+
+private val DASHED_BORDER = Color(0xFFAEBDBD)
+
+/** 점선 테두리의 보조 동작 버튼(영수증 사진, 메모). [leading]이 있으면 아이콘 대신 그걸 보여준다. */
+@Composable
+fun DashedActionButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .clip(shape)
+            .background(Color(0xFFF7F9F9))
+            .dashedBorder(DASHED_BORDER, 14.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (leading != null) leading() else Icon(icon, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
+        Text(label, fontSize = 14.sp, color = Color(0xFF3A3F46), maxLines = 1)
     }
 }
 

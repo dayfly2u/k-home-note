@@ -273,6 +273,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                         container.assetRepository,
                         container.consumableItemRepository,
                         container.repairRecordRepository,
+                        container.photoStorage,
                         container.categoryRepository,
                         screen.assetId,
                     ),

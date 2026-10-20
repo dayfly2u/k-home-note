@@ -70,7 +70,9 @@ import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.data.repository.ReplacementRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.photo.PhotoStorage
+import com.khomenote.ui.asset.OneTimeDoneInput
 import com.khomenote.ui.asset.OneTimeDoneSheet
+import com.khomenote.ui.asset.completedWith
 import com.khomenote.ui.common.AppIcons
 import com.khomenote.ui.item.ReplacementRecordSheet
 import com.khomenote.ui.common.KFilterChip
@@ -179,11 +181,9 @@ class HomeViewModel(
     val assets: StateFlow<List<AssetWithCategory>> = assetRepository.getAllWithCategory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** 일회성작업 "완료로 표시" — 한 날·가격·메모를 반영하고 알림을 꺼서(reminderLeadDays = null) 홈에서 뺀다. 기록은 대상 상세에 남는다. */
-    fun completeOneTime(record: RepairRecordEntity, date: LocalDate, price: Long?, memo: String?) {
-        viewModelScope.launch {
-            repairRecordRepository.save(record.copy(date = date, price = price, memo = memo, reminderLeadDays = null))
-        }
+    /** 일회성작업 "완료로 표시" — 한 날·가격·구매처·영수증 사진·메모를 반영하고 알림을 꺼서(reminderLeadDays = null) 홈에서 뺀다. 기록은 대상 상세에 남는다. */
+    fun completeOneTime(record: RepairRecordEntity, input: OneTimeDoneInput) {
+        viewModelScope.launch { repairRecordRepository.save(record.completedWith(input)) }
     }
 
     // remember{}로 화면(Composable)에만 두면 항목 클릭 후 뒤로 왔을 때 화면이
@@ -577,14 +577,16 @@ fun HomeScreen(
             record = target.record.record,
             assetName = target.assetName,
             onDismiss = { completingOneTime = null },
-            onComplete = { date, price, memo ->
-                viewModel.completeOneTime(target.record.record, date, price, memo)
+            onComplete = { input ->
+                viewModel.completeOneTime(target.record.record, input)
                 completingOneTime = null
             },
             onConvertToRecurring = { name ->
                 completingOneTime = null
                 onConvertToRecurring(target.record.record.assetId, name)
             },
+            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
         )
     }
 

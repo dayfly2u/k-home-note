@@ -38,4 +38,6 @@ data class RepairRecordEntity(
     val reminderLeadDays: Int? = null,
     val lastNotifiedForDate: LocalDate? = null,
     val lastNotifiedMilestoneDays: Int? = null,
+    val vendor: String? = null,
+    val photoUri: String? = null,
 )

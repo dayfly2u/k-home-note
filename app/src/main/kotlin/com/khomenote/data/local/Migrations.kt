@@ -83,3 +83,15 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         db.execSQL("ALTER TABLE `repair_records` ADD COLUMN `lastNotifiedMilestoneDays` INTEGER")
     }
 }
+
+/**
+ * repair_records에 vendor/photoUri 컬럼을 추가하는 순수 추가형(additive) 마이그레이션.
+ * 일회성작업의 완료 기록에도 주기성작업의 교체 기록처럼 구매처와 영수증 사진을 남기기 위한 컬럼 —
+ * 기존 행은 둘 다 null(구매처/사진 없음)로 그대로 보존된다.
+ */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `repair_records` ADD COLUMN `vendor` TEXT")
+        db.execSQL("ALTER TABLE `repair_records` ADD COLUMN `photoUri` TEXT")
+    }
+}

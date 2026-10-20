@@ -4,14 +4,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,12 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.khomenote.data.local.entity.ConsumableItemEntity
 import com.khomenote.data.local.entity.ReplacementRecordEntity
 import com.khomenote.ui.common.AppIcons
+import com.khomenote.ui.common.DashedActionButton
 import com.khomenote.ui.common.DateField
 import com.khomenote.ui.common.FormLabel
 import com.khomenote.ui.common.KModalSheet
@@ -49,7 +42,6 @@ import com.khomenote.ui.common.KTextField
 import com.khomenote.ui.common.SheetButtons
 import com.khomenote.ui.theme.TealContainer
 import com.khomenote.ui.theme.TealPrimaryDark
-import com.khomenote.ui.theme.TextPrimary
 import com.khomenote.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -65,7 +57,6 @@ data class ReplacementRecordInput(
 )
 
 private val NEXT_DUE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월 d일", Locale.KOREAN)
-private val DASHED_BORDER = Color(0xFFAEBDBD)
 
 /**
  * 주기성작업의 완료 기록(교체/구매 이력)을 남기거나 고치는 바텀시트(시안 Done.dc.html).
@@ -224,37 +215,5 @@ fun ReplacementRecordSheet(
                 )
             },
         )
-    }
-}
-
-/** 점선 테두리의 보조 동작 버튼(영수증 사진, 메모). [leading]이 있으면 아이콘 대신 그걸 보여준다. */
-@Composable
-private fun DashedActionButton(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    leading: (@Composable () -> Unit)? = null,
-) {
-    val shape = RoundedCornerShape(14.dp)
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .clip(shape)
-            .background(Color(0xFFF7F9F9))
-            .drawBehind {
-                drawRoundRect(
-                    color = DASHED_BORDER,
-                    cornerRadius = CornerRadius(14.dp.toPx()),
-                    style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))),
-                )
-            }
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (leading != null) leading() else Icon(icon, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
-        Text(label, fontSize = 14.sp, color = Color(0xFF3A3F46), maxLines = 1)
     }
 }

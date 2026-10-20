@@ -1,5 +1,6 @@
 package com.khomenote.ui.asset
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,10 +47,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +68,7 @@ import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
+import com.khomenote.photo.PhotoStorage
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.ReorderHandle
 import com.khomenote.ui.common.RowMoreMenu
@@ -73,6 +78,7 @@ import com.khomenote.ui.common.rememberDragDropListState
 import com.khomenote.ui.home.dDayStyle
 import com.khomenote.ui.home.dueBandFor
 import com.khomenote.ui.home.formatCycleLabel
+import com.khomenote.ui.item.LocalPhotoThumbnail
 import com.khomenote.ui.theme.CardBorder
 import com.khomenote.ui.theme.NumberFontFamily
 import com.khomenote.ui.theme.OnceTagBorder
@@ -81,11 +87,13 @@ import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TealPrimary
 import com.khomenote.ui.theme.TextFaint
 import com.khomenote.ui.theme.TextSecondary
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -108,6 +116,7 @@ class AssetDetailViewModel(
     private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
     private val repairRecordRepository: RepairRecordRepository,
+    private val photoStorage: PhotoStorage,
     categoryRepository: CategoryRepository,
     private val assetId: Long,
 ) : ViewModel() {
@@ -147,21 +156,30 @@ class AssetDetailViewModel(
                     price = input.price,
                     memo = input.memo,
                     reminderLeadDays = input.reminderLeadDays,
+                    // 이 시트에는 구매처/사진 입력이 없다 — 완료 기록으로 남긴 값이 수정할 때 지워지면 안 된다.
+                    vendor = existing?.vendor,
+                    photoUri = existing?.photoUri,
                 )
             )
         }
     }
 
-    /** "완료로 표시" — 실제 한 날·가격·메모를 반영하고 알림을 꺼서(reminderLeadDays = null) 홈에서 빼되 기록은 남긴다. */
-    fun completeRepairRecord(record: RepairRecordEntity, date: LocalDate, price: Long?, memo: String?) {
-        saveRepairRecord(
-            record,
-            RepairRecordInput(name = record.name, date = date, price = price, memo = memo, reminderLeadDays = null),
-        )
+    /** "완료로 표시" — 실제 한 날·가격·구매처·영수증 사진·메모를 반영하고 알림을 꺼서 홈에서 빼되 기록은 남긴다. */
+    fun completeRepairRecord(record: RepairRecordEntity, input: OneTimeDoneInput) {
+        viewModelScope.launch { repairRecordRepository.save(record.completedWith(input)) }
     }
 
     fun deleteRepairRecord(record: RepairRecordEntity) {
-        viewModelScope.launch { repairRecordRepository.delete(record) }
+        viewModelScope.launch {
+            repairRecordRepository.delete(record)
+            record.photoUri?.let { path -> withContext(Dispatchers.IO) { photoStorage.deletePhoto(path) } }
+        }
+    }
+
+    suspend fun pickPhoto(uri: Uri): String? = photoStorage.copyToInternalStorage(uri)
+
+    fun discardPhoto(path: String) {
+        viewModelScope.launch(Dispatchers.IO) { photoStorage.deletePhoto(path) }
     }
 }
 
@@ -169,12 +187,13 @@ class AssetDetailViewModelFactory(
     private val assetRepository: AssetRepository,
     private val consumableItemRepository: ConsumableItemRepository,
     private val repairRecordRepository: RepairRecordRepository,
+    private val photoStorage: PhotoStorage,
     private val categoryRepository: CategoryRepository,
     private val assetId: Long,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        AssetDetailViewModel(assetRepository, consumableItemRepository, repairRecordRepository, categoryRepository, assetId) as T
+        AssetDetailViewModel(assetRepository, consumableItemRepository, repairRecordRepository, photoStorage, categoryRepository, assetId) as T
 }
 
 private fun repairSubtitle(record: RepairRecordEntity): String {
@@ -185,7 +204,7 @@ private fun repairSubtitle(record: RepairRecordEntity): String {
     } else {
         record.date.toString()
     }
-    return listOfNotNull(dateText, priceText).joinToString(" · ")
+    return listOfNotNull(dateText, priceText, record.vendor?.takeIf { it.isNotBlank() }).joinToString(" · ")
 }
 
 @Composable
@@ -223,6 +242,19 @@ fun AssetDetailScreen(
     var editingRepairRecord by remember { mutableStateOf<RepairRecordEntity?>(null) }
     var completingRepairRecord by remember { mutableStateOf<RepairRecordEntity?>(null) }
     var pendingDeleteRepair by remember { mutableStateOf<RepairRecordEntity?>(null) }
+    var expandedPhotoPath by remember { mutableStateOf<String?>(null) }
+
+    expandedPhotoPath?.let { path ->
+        Dialog(
+            onDismissRequest = { expandedPhotoPath = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            LocalPhotoThumbnail(
+                path = path,
+                modifier = Modifier.fillMaxWidth().padding(24.dp).clickable { expandedPhotoPath = null },
+            )
+        }
+    }
 
     pendingDelete?.let { item ->
         AlertDialog(
@@ -289,14 +321,16 @@ fun AssetDetailScreen(
             record = target,
             assetName = asset?.name.orEmpty(),
             onDismiss = { completingRepairRecord = null },
-            onComplete = { date, price, memo ->
-                viewModel.completeRepairRecord(target, date, price, memo)
+            onComplete = { input ->
+                viewModel.completeRepairRecord(target, input)
                 completingRepairRecord = null
             },
             onConvertToRecurring = { name ->
                 completingRepairRecord = null
                 onConvertToRecurring(name)
             },
+            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
         )
     }
 
@@ -436,6 +470,7 @@ fun AssetDetailScreen(
                                     today = today,
                                     showTopDivider = index > 0,
                                     onComplete = { completingRepairRecord = record },
+                                    onPhotoClick = { path -> expandedPhotoPath = path },
                                     onEdit = { editingRepairRecord = record },
                                     onDelete = { pendingDeleteRepair = record },
                                 )
@@ -539,6 +574,7 @@ private fun RepairRow(
     today: LocalDate,
     showTopDivider: Boolean,
     onComplete: () -> Unit,
+    onPhotoClick: (String) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -582,6 +618,13 @@ private fun RepairRow(
             if (!record.memo.isNullOrBlank()) {
                 Text(record.memo, fontSize = 12.sp, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+        }
+        record.photoUri?.let { path ->
+            LocalPhotoThumbnail(
+                path = path,
+                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).clickable { onPhotoClick(path) },
+                contentScale = ContentScale.Crop,
+            )
         }
         if (lead != null) {
             val dStyle = dDayStyle(DueDateCalculator.daysUntilDue(record.date, today), lead)
