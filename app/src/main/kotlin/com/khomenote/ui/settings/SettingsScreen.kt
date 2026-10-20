@@ -61,6 +61,7 @@ import com.khomenote.data.repository.CategoryRepository
 import com.khomenote.notification.ReminderScheduler
 import com.khomenote.ui.common.AppIcons
 import com.khomenote.ui.common.MoreBelowIndicator
+import com.khomenote.ui.common.ReorderHandle
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.formatReminderTime
@@ -305,12 +306,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                         Text(row.category.emoji, fontSize = 18.sp)
                                         Text(row.category.name, modifier = Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                                         Text("대상 ${row.assetCount}", fontSize = 13.sp, color = TextSecondary)
-                                        Text(
-                                            "≡",
-                                            modifier = Modifier.dragHandle(index, dragState).padding(horizontal = 10.dp, vertical = 8.dp),
-                                            style = MaterialTheme.typography.titleLarge,
-                                            color = TextFaint,
-                                        )
+                                        ReorderHandle(Modifier.dragHandle(index, dragState))
                                     }
                                 }
                             }

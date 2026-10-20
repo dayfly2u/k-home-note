@@ -65,6 +65,7 @@ import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.ui.common.MoreBelowIndicator
+import com.khomenote.ui.common.ReorderHandle
 import com.khomenote.ui.common.RowMoreMenu
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
@@ -503,12 +504,7 @@ private fun RecurringRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            "≡",
-            modifier = dragHandleModifier.padding(horizontal = 8.dp, vertical = 12.dp),
-            style = MaterialTheme.typography.titleLarge,
-            color = TextFaint,
-        )
+        ReorderHandle(dragHandleModifier)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(

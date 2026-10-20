@@ -34,6 +34,9 @@ object AppIcons {
     /** 줄 그어진 종 — 알림이 꺼짐 */
     val BellOff: ImageVector by lazy { strokeIcon("BellOff", "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4M3 3l18 18") }
 
+    /** 가로 세 줄 — 길게 눌러 순서 바꾸기 손잡이 */
+    val Reorder: ImageVector by lazy { strokeIcon("Reorder", "M5 8h14M5 12h14M5 16h14") }
+
     /** 연필 — 수정 */
     val Edit: ImageVector by lazy { strokeIcon("Edit", "M4 20h4L19 9l-4-4L4 16z") }
 

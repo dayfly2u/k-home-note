@@ -47,6 +47,7 @@ import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.PillAddButton
+import com.khomenote.ui.common.ReorderHandle
 import com.khomenote.ui.common.RowMoreMenu
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
@@ -288,12 +289,7 @@ fun AssetListScreen(
                                         if (summary.recurringCount > 0) blockedDelete = asset else pendingDelete = asset
                                     },
                                 )
-                                Text(
-                                    "≡",
-                                    modifier = Modifier.dragHandle(index, dragState).padding(horizontal = 10.dp, vertical = 8.dp),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TextFaint,
-                                )
+                                ReorderHandle(Modifier.dragHandle(index, dragState))
                             }
                         }
                     }
