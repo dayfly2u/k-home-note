@@ -40,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -268,6 +269,7 @@ private fun HomeHeader(
     summary: HomeSummaryCounts,
     viewMode: HomeViewMode,
     onViewModeChange: (HomeViewMode) -> Unit,
+    onSummaryClick: (DueBand) -> Unit,
     onAddClick: () -> Unit,
 ) {
     val today = remember { LocalDate.now() }
@@ -312,9 +314,18 @@ private fun HomeHeader(
         if (viewMode == HomeViewMode.LIST) {
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
-                HomeSummaryTile("지났어요", summary.overdue, Modifier.weight(1f), showDot = summary.overdue > 0)
-                HomeSummaryTile("챙길 때", summary.dueSoon, Modifier.weight(1f), leftDivider = true)
-                HomeSummaryTile("한 달 안", summary.withinMonth, Modifier.weight(1f), leftDivider = true)
+                HomeSummaryTile(
+                    "지났어요", summary.overdue, { onSummaryClick(DueBand.OVERDUE) },
+                    Modifier.weight(1f), showDot = summary.overdue > 0,
+                )
+                HomeSummaryTile(
+                    "챙길 때", summary.dueSoon, { onSummaryClick(DueBand.DUE_SOON) },
+                    Modifier.weight(1f), leftDivider = true,
+                )
+                HomeSummaryTile(
+                    "한 달 안", summary.withinMonth, { onSummaryClick(DueBand.WITHIN_MONTH) },
+                    Modifier.weight(1f), leftDivider = true,
+                )
             }
         }
     }
@@ -357,12 +368,15 @@ private val HEADER_DIVIDER = Color(0xFF2E7277)
 private fun HomeSummaryTile(
     label: String,
     count: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showDot: Boolean = false,
     leftDivider: Boolean = false,
 ) {
     Column(
         modifier = modifier
+            // 누르면 그 구간의 목록 위치로 스크롤한다 — 클릭 영역은 칸 전체(세로선·여백 포함).
+            .clickable(onClick = onClick)
             .then(
                 if (leftDivider) {
                     Modifier.drawBehind {
@@ -519,6 +533,14 @@ fun HomeScreen(
         items.filter { categoryFilter == null || it.categoryId == categoryFilter }
     }
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    // 헤더 요약 3칸을 누르면 목록에서 그 구간의 제목 위치로 부드럽게 스크롤한다(그 구간에 작업이 없으면 가만히 둔다).
+    fun scrollToBand(band: DueBand) {
+        val presentBands = filteredItems.groupedBySection().map { it.first }
+        val index = sectionHeaderIndex(presentBands, band) ?: return
+        scope.launch { listState.animateScrollToItem(index) }
+    }
 
     if (showAddSheet) {
         HomeAddSheet(
@@ -572,6 +594,7 @@ fun HomeScreen(
                 summary = items.summaryCounts(),
                 viewMode = viewMode,
                 onViewModeChange = { changeViewMode(it) },
+                onSummaryClick = { band -> scrollToBand(band) },
                 onAddClick = { addSheetInitialAssetId = null; showAddSheet = true },
             )
         },

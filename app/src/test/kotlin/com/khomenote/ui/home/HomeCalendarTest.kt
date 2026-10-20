@@ -58,6 +58,19 @@ class HomeCalendarTest {
     }
 
     @Test
+    fun `구간 제목 위치는 보이는 구간 순서 곱하기 2다`() {
+        val present = listOf(DueBand.OVERDUE, DueBand.WITHIN_MONTH, DueBand.LATER)
+        assertEquals(0, sectionHeaderIndex(present, DueBand.OVERDUE))
+        assertEquals(2, sectionHeaderIndex(present, DueBand.WITHIN_MONTH))
+        assertEquals(4, sectionHeaderIndex(present, DueBand.LATER))
+    }
+
+    @Test
+    fun `목록에 없는 구간은 위치가 없다`() {
+        assertNull(sectionHeaderIndex(listOf(DueBand.OVERDUE), DueBand.DUE_SOON))
+    }
+
+    @Test
     fun `월 제목과 날짜 제목 표기`() {
         assertEquals("2026년 10월", monthTitle(YearMonth.of(2026, 10)))
         assertEquals("10월 22일 (목)", dayTitle(LocalDate.of(2026, 10, 22)))

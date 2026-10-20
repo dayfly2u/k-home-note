@@ -50,6 +50,13 @@ fun <T : HomeRowUiModel> List<T>.groupedBySection(): List<Pair<DueBand, List<T>>
         .map { dueBandFor(it.daysUntilDue, it.reminderLeadDays) to it }
         .groupedByBand()
 
+/**
+ * 홈 목록(LazyColumn)에서 [target] 구간의 섹션 제목이 몇 번째 항목인지. 구간마다 항목이 2개(제목, 카드)씩이라
+ * [presentBands](실제로 보이는 구간들, 정해진 순서)에서의 위치 × 2다. 그 구간이 목록에 없으면 null.
+ */
+internal fun sectionHeaderIndex(presentBands: List<DueBand>, target: DueBand): Int? =
+    presentBands.indexOf(target).takeIf { it >= 0 }?.let { it * 2 }
+
 private val KOREAN_MONTH_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일")
 
 /**
