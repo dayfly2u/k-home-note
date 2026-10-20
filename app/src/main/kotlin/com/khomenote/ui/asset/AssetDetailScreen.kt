@@ -318,7 +318,7 @@ fun AssetDetailScreen(
 
     Scaffold(
         topBar = {
-            // 시안(AssetDetail.dc.html): TopAppBar 대신 아이콘만 있는 뒤로가기 + 오른쪽 "대상 수정".
+            // 시안(AssetDetail.dc.html): TopAppBar 대신 아이콘만 있는 뒤로가기 + 오른쪽 ⋯ 메뉴("대상 수정 / 대상 삭제").
             Row(
                 modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 8.dp, top = 6.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -327,26 +327,16 @@ fun AssetDetailScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로", modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onEditAsset) {
-                    Text("대상 수정", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
-                }
                 if (asset != null) {
-                    var menuOpen by remember { mutableStateOf(false) }
-                    Box {
-                        IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(width = 36.dp, height = 44.dp)) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "더보기", tint = TextFaint, modifier = Modifier.size(18.dp))
-                        }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text("대상 삭제") },
-                                onClick = {
-                                    menuOpen = false
-                                    // 주기성작업이 남아 있으면 지울 수 없다(예전 모아보기 카드의 삭제와 같은 규칙).
-                                    if (uiState.items.isNotEmpty()) showDeleteAssetBlocked = true else showDeleteAssetConfirm = true
-                                },
-                            )
-                        }
-                    }
+                    RowMoreMenu(
+                        onEdit = onEditAsset,
+                        onDelete = {
+                            // 주기성작업이 남아 있으면 지울 수 없다(모아보기 카드의 삭제와 같은 규칙).
+                            if (uiState.items.isNotEmpty()) showDeleteAssetBlocked = true else showDeleteAssetConfirm = true
+                        },
+                        editLabel = "대상 수정",
+                        deleteLabel = "대상 삭제",
+                    )
                 }
             }
         },
