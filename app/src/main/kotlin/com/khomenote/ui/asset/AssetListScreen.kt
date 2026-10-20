@@ -47,6 +47,7 @@ import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.PillAddButton
+import com.khomenote.ui.common.RowMoreMenu
 import com.khomenote.ui.common.dragElevation
 import com.khomenote.ui.common.dragHandle
 import com.khomenote.ui.common.rememberDragDropListState
@@ -99,6 +100,11 @@ class AssetListViewModel(
     fun reorder(orderedAssets: List<AssetWithCategory>) {
         viewModelScope.launch { assetRepository.reorder(orderedAssets.map { it.asset }) }
     }
+
+    /** 대상을 지운다(일회성작업 기록도 함께 삭제됨). 주기성작업이 남아 있으면 호출하는 쪽에서 먼저 막는다. */
+    fun deleteAsset(asset: AssetWithCategory) {
+        viewModelScope.launch { assetRepository.delete(asset.asset) }
+    }
 }
 
 class AssetListViewModelFactory(
@@ -117,11 +123,30 @@ fun AssetListScreen(
     viewModel: AssetListViewModel,
     onAddAsset: () -> Unit,
     onAssetClick: (Long) -> Unit,
+    onEditAsset: (Long) -> Unit,
 ) {
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
     val summaries by viewModel.summaries.collectAsStateWithLifecycle()
+
+    var pendingDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
+    var blockedDelete by remember { mutableStateOf<AssetWithCategory?>(null) }
+
+    pendingDelete?.let { target ->
+        AssetDeleteConfirmDialog(
+            assetName = target.asset.name,
+            oneTimeCount = (summaries[target.asset.id] ?: AssetCardSummary.EMPTY).oneTimeCount,
+            onConfirm = {
+                viewModel.deleteAsset(target)
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null },
+        )
+    }
+    blockedDelete?.let { target ->
+        AssetDeleteBlockedDialog(assetName = target.asset.name, onDismiss = { blockedDelete = null })
+    }
 
     // 드래그 중에는 화면에 보이는 순서(displayAssets)를 직접 바꾸고, 드래그가
     // 끝나야 DB에 저장한다. Flow(assets)가 새로 값을 흘려보내도 드래그 중에는
@@ -216,8 +241,8 @@ fun AssetListScreen(
                                     .background(SurfaceWhite)
                                     .border(1.dp, CardBorder, cardShape)
                                     .clickable { onAssetClick(asset.asset.id) }
-                                    .padding(start = 14.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    .padding(start = 14.dp, top = 12.dp, end = 4.dp, bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Box(
@@ -256,6 +281,13 @@ fun AssetListScreen(
                                         }
                                     }
                                 }
+                                RowMoreMenu(
+                                    onEdit = { onEditAsset(asset.asset.id) },
+                                    onDelete = {
+                                        // 주기성작업이 남아 있으면 지울 수 없다(대상 상세의 삭제와 같은 규칙).
+                                        if (summary.recurringCount > 0) blockedDelete = asset else pendingDelete = asset
+                                    },
+                                )
                                 Text(
                                     "≡",
                                     modifier = Modifier.dragHandle(index, dragState).padding(horizontal = 10.dp, vertical = 8.dp),

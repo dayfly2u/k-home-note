@@ -34,6 +34,12 @@ object AppIcons {
     /** 줄 그어진 종 — 알림이 꺼짐 */
     val BellOff: ImageVector by lazy { strokeIcon("BellOff", "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4M3 3l18 18") }
 
+    /** 연필 — 수정 */
+    val Edit: ImageVector by lazy { strokeIcon("Edit", "M4 20h4L19 9l-4-4L4 16z") }
+
+    /** 휴지통 — 삭제 */
+    val Trash: ImageVector by lazy { strokeIcon("Trash", "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3") }
+
     /** 점 있는 세 줄 — 홈 "목록" 보기 */
     val ViewList: ImageVector by lazy { strokeIcon("ViewList", "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01") }
 

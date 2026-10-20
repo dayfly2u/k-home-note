@@ -244,30 +244,19 @@ fun AssetDetailScreen(
     var showDeleteAssetBlocked by remember { mutableStateOf(false) }
 
     if (showDeleteAssetConfirm && asset != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteAssetConfirm = false },
-            title = { Text("대상을 삭제할까요?") },
-            text = {
-                val oneTimeNote = if (uiState.repairRecords.isNotEmpty()) " 일회성작업 기록 ${uiState.repairRecords.size}개도 함께 삭제됩니다." else ""
-                Text("\"${asset.name}\"이 삭제되며 되돌릴 수 없습니다.$oneTimeNote")
+        AssetDeleteConfirmDialog(
+            assetName = asset.name,
+            oneTimeCount = uiState.repairRecords.size,
+            onConfirm = {
+                showDeleteAssetConfirm = false
+                viewModel.deleteAsset(asset, onDone = onBack)
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteAssetConfirm = false
-                    viewModel.deleteAsset(asset, onDone = onBack)
-                }) { Text("삭제") }
-            },
-            dismissButton = { TextButton(onClick = { showDeleteAssetConfirm = false }) { Text("취소") } },
+            onDismiss = { showDeleteAssetConfirm = false },
         )
     }
 
     if (showDeleteAssetBlocked && asset != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteAssetBlocked = false },
-            title = { Text("삭제할 수 없습니다") },
-            text = { Text("\"${asset.name}\"에 등록된 주기성작업이 있습니다. 먼저 모두 삭제한 뒤 다시 시도해주세요.") },
-            confirmButton = { TextButton(onClick = { showDeleteAssetBlocked = false }) { Text("확인") } },
-        )
+        AssetDeleteBlockedDialog(assetName = asset.name, onDismiss = { showDeleteAssetBlocked = false })
     }
 
     if (showRepairDialog) {
