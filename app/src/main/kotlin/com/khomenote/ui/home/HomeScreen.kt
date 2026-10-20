@@ -77,6 +77,7 @@ import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.theme.CardBorder
 import com.khomenote.ui.theme.NumberFontFamily
 import com.khomenote.ui.theme.OnceTagBorder
+import com.khomenote.ui.theme.OneTimeYellow
 import com.khomenote.ui.theme.OrangeHeaderDot
 import com.khomenote.ui.theme.OrangeUrgent
 import com.khomenote.ui.theme.OrangeUrgentContainer
@@ -401,6 +402,8 @@ internal fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit, onLongClick: 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // 일회성작업은 연한노랑 바탕으로 주기성작업과 구분한다.
+            .background(if (uiModel is HomeRowUiModel.OneTime) OneTimeYellow else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -454,8 +457,7 @@ internal fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit, onLongClick: 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onItemClick: (Long) -> Unit,
-    onOneTimeTaskClick: (Long) -> Unit,
+    onEditRecurringItem: (Long) -> Unit,
     onAddAsset: () -> Unit,
     onAddRecurringItem: (Long) -> Unit,
     onAddOneTimeTask: (Long) -> Unit,
@@ -499,18 +501,18 @@ fun HomeScreen(
         homePrefs.edit().putString("view_mode", mode.name).apply()
     }
 
-    // 목록과 달력 보기가 같은 행 동작을 쓴다 — 일회성작업은 가볍게 누르면 바로 "완료로 표시" 시트,
-    // 대신 그 대상의 상세(수정/삭제)는 꾹 눌러서 간다.
+    // 목록과 달력 보기가 같은 행 동작을 쓴다.
+    // 누르기: 주기성작업은 "완료 기록" 시트, 일회성작업은 "완료로 표시" 시트 — 둘 다 "끝냈다"는 기록을 남기는 동작이다.
     fun handleRowClick(uiModel: HomeRowUiModel) {
         when (uiModel) {
-            is HomeRowUiModel.Recurring -> onItemClick(uiModel.status.item.id)
+            is HomeRowUiModel.Recurring -> recordingRecurring = uiModel
             is HomeRowUiModel.OneTime -> completingOneTime = uiModel
         }
     }
-    // 꾹 누르기: 주기성작업은 바로 "완료 기록" 시트, 일회성작업은 그 대상의 상세(수정/삭제).
+    // 꾹 누르기: 주기성작업은 수정 화면, 일회성작업은 동작 없음(수정/삭제는 모아보기 → 대상 상세에서).
     fun rowLongClick(uiModel: HomeRowUiModel): (() -> Unit)? = when (uiModel) {
-        is HomeRowUiModel.Recurring -> ({ recordingRecurring = uiModel })
-        is HomeRowUiModel.OneTime -> ({ onOneTimeTaskClick(uiModel.record.record.assetId) })
+        is HomeRowUiModel.Recurring -> ({ onEditRecurringItem(uiModel.status.item.id) })
+        is HomeRowUiModel.OneTime -> null
     }
 
     val filteredItems = remember(items, categoryFilter) {

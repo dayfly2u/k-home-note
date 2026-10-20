@@ -37,6 +37,11 @@ val RowDivider = Color(0xFFEAEFEF)
 // 일회성작업 "한 번" 태그 색 (v0.6 연한노랑 배경 대체).
 val OnceTagBorder = Color(0xFFA9C7C5)
 
+// 일회성작업 표시 — 홈 목록의 연한노랑 행 바탕(v0.5.8에서 쓰던 색)과 달력에서 날짜를 두르는 노란 원 테두리.
+// 주기성작업과 한눈에 구분되도록 2026-10-20에 다시 도입했다(청록 한 가지 + 주황 규칙의 의도된 예외).
+val OneTimeYellow = Color(0xFFFFF9C4)
+val OneTimeYellowRing = Color(0xFFF2C200)
+
 private val KHomeNoteColorScheme = lightColorScheme(
     primary = TealPrimary,
     onPrimary = Color.White,

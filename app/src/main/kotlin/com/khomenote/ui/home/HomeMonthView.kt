@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.khomenote.ui.common.AppIcons
 import com.khomenote.ui.theme.CardBorder
 import com.khomenote.ui.theme.NumberFontFamily
+import com.khomenote.ui.theme.OneTimeYellowRing
 import com.khomenote.ui.theme.RowDivider
 import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TealPrimary
@@ -122,6 +123,7 @@ internal fun HomeMonthView(
                             isSelected = date != null && date == selected,
                             bands = date?.let { itemsByDate[it].orEmpty() }.orEmpty()
                                 .map { dueBandFor(it.daysUntilDue, it.reminderLeadDays) },
+                            hasOneTime = date?.let { d -> itemsByDate[d].orEmpty().any { it is HomeRowUiModel.OneTime } } ?: false,
                             onClick = { date?.let { selected = it } },
                             modifier = Modifier.weight(1f),
                         )
@@ -166,6 +168,7 @@ private fun DayCell(
     today: LocalDate,
     isSelected: Boolean,
     bands: List<DueBand>,
+    hasOneTime: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -184,7 +187,14 @@ private fun DayCell(
                 .size(34.dp)
                 .clip(CircleShape)
                 .background(if (isSelected) TealPrimary else Color.Transparent)
-                .then(if (isToday && !isSelected) Modifier.border(1.5.dp, TealPrimary, CircleShape) else Modifier),
+                .then(
+                    when {
+                        // 일회성작업이 있는 날은 노란 원 테두리(선택된 날에도 청록 원 둘레에 보인다). 오늘 표시(청록 테두리)보다 우선한다.
+                        hasOneTime -> Modifier.border(2.dp, OneTimeYellowRing, CircleShape)
+                        isToday && !isSelected -> Modifier.border(1.5.dp, TealPrimary, CircleShape)
+                        else -> Modifier
+                    },
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Text(

@@ -211,8 +211,7 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                 )
                 HomeScreen(
                     viewModel = vm,
-                    onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
-                    onOneTimeTaskClick = { assetId -> push(Screen.AssetDetail(assetId)) },
+                    onEditRecurringItem = { itemId -> push(Screen.ItemForm(assetId = null, itemId = itemId)) },
                     onAddAsset = { push(Screen.AssetForm(null, returnToAddSheet = true)) },
                     onAddRecurringItem = { assetId -> push(Screen.ItemForm(assetId, null)) },
                     onAddOneTimeTask = { assetId -> push(Screen.AssetDetail(assetId, openOneTimeForm = true)) },
