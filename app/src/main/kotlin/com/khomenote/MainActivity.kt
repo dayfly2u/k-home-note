@@ -28,7 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
@@ -135,6 +138,8 @@ private val TAB_ROOTS = listOf(Screen.Home, Screen.AssetList, Screen.Settings)
 private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen>, window: android.view.Window) {
     val current = backStack.last()
     val viewModelStoreOwners = remember { java.util.IdentityHashMap<Screen, ScreenViewModelStoreOwner>() }
+    // 홈 "+" 시트의 "새 대상 만들기"로 대상을 만들고 돌아오면, 홈이 그 대상이 골라진 시트를 다시 열도록 id를 넘겨 둔다.
+    var pendingAddSheetAssetId by remember { mutableStateOf<Long?>(null) }
 
     // 홈은 청록 헤더가 상태바 뒤까지 덮으므로 흰 상태바 아이콘이, 나머지 화면은 밝은 바탕이므로 어두운 아이콘이 보여야 한다.
     // targetSdk 36에서는 시스템이 상태바 바탕을 투명하게 두기 때문에 앱이 직접 아이콘 색을 정해줘야 한다.
@@ -206,10 +211,12 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     viewModel = vm,
                     onItemClick = { itemId -> push(Screen.ItemDetail(itemId)) },
                     onOneTimeTaskClick = { assetId -> push(Screen.AssetDetail(assetId)) },
-                    onAddAsset = { push(Screen.AssetForm(null)) },
+                    onAddAsset = { push(Screen.AssetForm(null, returnToAddSheet = true)) },
                     onAddRecurringItem = { assetId -> push(Screen.ItemForm(assetId, null)) },
                     onAddOneTimeTask = { assetId -> push(Screen.AssetDetail(assetId, openOneTimeForm = true)) },
                     onConvertToRecurring = { assetId, name -> push(Screen.ItemForm(assetId, null, name)) },
+                    reopenAddSheetForAsset = pendingAddSheetAssetId,
+                    onReopenHandled = { pendingAddSheetAssetId = null },
                 )
             }
 
@@ -247,10 +254,13 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     isNew = screen.assetId == null,
                     onSaved = { savedId ->
                         // 새 대상은 저장하면 바로 그 대상의 상세 화면으로 이어간다(주기성작업을 바로 추가할 수 있게).
+                        // 홈 "+" 시트에서 온 경우에는 홈으로 돌아가 그 대상이 골라진 시트를 다시 연다.
                         // 수정은 예전처럼 돌아가기만 한다.
                         val wasNew = screen.assetId == null
                         pop()
-                        if (wasNew) push(Screen.AssetDetail(savedId))
+                        if (wasNew) {
+                            if (screen.returnToAddSheet) pendingAddSheetAssetId = savedId else push(Screen.AssetDetail(savedId))
+                        }
                     },
                     onBack = { pop() },
                 )

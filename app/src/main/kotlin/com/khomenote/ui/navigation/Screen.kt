@@ -5,7 +5,8 @@ sealed interface Screen {
     data object Home : Screen
     data object AssetList : Screen
     data object Settings : Screen
-    data class AssetForm(val assetId: Long?) : Screen
+    /** [returnToAddSheet]가 true면(홈 "+" 시트의 "새 대상 만들기"로 들어온 경우) 새 대상을 저장한 뒤 상세가 아니라 홈의 시트로 돌아간다. */
+    data class AssetForm(val assetId: Long?, val returnToAddSheet: Boolean = false) : Screen
     /** [openOneTimeForm]이 true면 들어가자마자 일회성작업 추가 다이얼로그를 연다(홈 "+" 시트에서 진입할 때). */
     data class AssetDetail(val assetId: Long, val openOneTimeForm: Boolean = false) : Screen
     /** [assetId]는 새 항목을 만들 때만 필요하다. 수정([itemId]가 있는 경우)은

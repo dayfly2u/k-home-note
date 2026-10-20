@@ -49,29 +49,31 @@ import com.khomenote.ui.theme.TextSecondary
 @Composable
 fun HomeAddSheet(
     assets: List<AssetWithCategory>,
+    initialAssetId: Long?,
     onDismiss: () -> Unit,
     onAddAsset: () -> Unit,
     onAddRecurring: (Long) -> Unit,
     onAddOneTime: (Long) -> Unit,
 ) {
-    var selected by remember { mutableStateOf<AssetWithCategory?>(null) }
+    // initialAssetId: "새 대상 만들기"로 방금 만든 대상이 있으면 그 대상이 이미 골라진 상태로 시작한다.
+    var selectedId by remember { mutableStateOf(initialAssetId) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SurfaceWhite) {
         Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 24.dp)) {
-            val target = selected
+            val target = assets.firstOrNull { it.asset.id == selectedId }
             if (target == null) {
                 Text("어디에 추가할까요?", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 if (assets.isEmpty()) {
                     Text("등록된 대상이 없어요. 먼저 대상(보일러, 자동차, 카드 등)을 추가해 주세요.", fontSize = 13.sp, color = TextSecondary)
                     Spacer(Modifier.height(16.dp))
-                    ChoiceButton(title = "대상 추가", description = null, filled = true, onClick = onAddAsset)
+                    ChoiceButton(title = "새 대상 만들기", description = null, filled = true, onClick = onAddAsset)
                 } else {
                     Text("작업을 추가할 대상을 골라 주세요.", fontSize = 13.sp, color = TextSecondary)
                     Spacer(Modifier.height(8.dp))
                     LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
                         items(assets, key = { it.asset.id }) { asset ->
                             Row(
-                                modifier = Modifier.fillMaxWidth().clickable { selected = asset }.padding(vertical = 10.dp),
+                                modifier = Modifier.fillMaxWidth().clickable { selectedId = asset.asset.id }.padding(vertical = 10.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -88,11 +90,19 @@ fun HomeAddSheet(
                             HorizontalDivider(color = RowDivider)
                         }
                     }
+                    // 대상이 많아 목록이 스크롤되어도 이 줄은 항상 보인다.
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(48.dp).clickable(onClick = onAddAsset),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("+ 새 대상 만들기", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
+                    }
                 }
             } else {
                 Text(
                     "< ${target.asset.name}",
-                    modifier = Modifier.clickable { selected = null }.padding(vertical = 4.dp),
+                    modifier = Modifier.clickable { selectedId = null }.padding(vertical = 4.dp),
                     fontSize = 14.sp,
                     color = TealPrimary,
                     fontWeight = FontWeight.Bold,

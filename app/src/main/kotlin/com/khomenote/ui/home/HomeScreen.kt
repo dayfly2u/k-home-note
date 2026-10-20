@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -418,12 +419,24 @@ fun HomeScreen(
     onAddRecurringItem: (Long) -> Unit,
     onAddOneTimeTask: (Long) -> Unit,
     onConvertToRecurring: (assetId: Long, name: String) -> Unit,
+    reopenAddSheetForAsset: Long?,
+    onReopenHandled: () -> Unit,
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     var showAddSheet by remember { mutableStateOf(false) }
+    var addSheetInitialAssetId by remember { mutableStateOf<Long?>(null) }
+
+    // 시트의 "새 대상 만들기"로 대상을 만들고 돌아왔으면 그 대상이 골라진 채로 시트를 다시 연다.
+    LaunchedEffect(reopenAddSheetForAsset) {
+        if (reopenAddSheetForAsset != null) {
+            addSheetInitialAssetId = reopenAddSheetForAsset
+            showAddSheet = true
+            onReopenHandled()
+        }
+    }
     var completingOneTime by remember { mutableStateOf<HomeRowUiModel.OneTime?>(null) }
 
     // 목록/달력 보기 선택은 앱을 껐다 켜도 유지한다(DB가 아니라 가벼운 설정값이라 SharedPreferences).
@@ -458,7 +471,8 @@ fun HomeScreen(
     if (showAddSheet) {
         HomeAddSheet(
             assets = assets,
-            onDismiss = { showAddSheet = false },
+            initialAssetId = addSheetInitialAssetId,
+            onDismiss = { showAddSheet = false; addSheetInitialAssetId = null },
             onAddAsset = { showAddSheet = false; onAddAsset() },
             onAddRecurring = { assetId -> showAddSheet = false; onAddRecurringItem(assetId) },
             onAddOneTime = { assetId -> showAddSheet = false; onAddOneTimeTask(assetId) },
@@ -487,7 +501,7 @@ fun HomeScreen(
                 summary = items.summaryCounts(),
                 viewMode = viewMode,
                 onViewModeChange = { changeViewMode(it) },
-                onAddClick = { showAddSheet = true },
+                onAddClick = { addSheetInitialAssetId = null; showAddSheet = true },
             )
         },
     ) { padding ->
