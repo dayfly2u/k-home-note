@@ -56,6 +56,22 @@ data class RepairRecordInput(
 )
 
 /**
+ * 입력값으로 만든 저장용 기록. 수정이면 [existing]의 id를 이어받고, 이 시트에는 구매처/사진 입력이 없으므로
+ * 완료 기록으로 남긴 값이 수정할 때 지워지지 않게 [existing]의 것을 그대로 가져온다.
+ */
+fun RepairRecordInput.toEntity(assetId: Long, existing: RepairRecordEntity?): RepairRecordEntity = RepairRecordEntity(
+    id = existing?.id ?: 0,
+    assetId = assetId,
+    name = name,
+    date = date,
+    price = price,
+    memo = memo,
+    reminderLeadDays = reminderLeadDays,
+    vendor = existing?.vendor,
+    photoUri = existing?.photoUri,
+)
+
+/**
  * 소모품 교체 주기와 무관한 일회성작업(예정된 일정이거나 이미 끝난 일 기록)을 입력/수정하는 바텀시트.
  * [initial]이 있으면 수정, 없으면 새로 추가. "알림 받기"를 켜면 대시보드에 표시되고 알림을 받는다 —
  * 처리를 끝냈으면 "완료로 표시"([OneTimeDoneSheet])로 꺼서 대시보드/알림 목록에서 빼면 된다(소모품과 달리 다음 주기로 안 넘어간다).

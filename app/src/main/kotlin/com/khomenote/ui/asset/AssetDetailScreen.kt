@@ -69,6 +69,7 @@ import com.khomenote.data.repository.ConsumableItemRepository
 import com.khomenote.data.repository.RepairRecordRepository
 import com.khomenote.domain.DueDateCalculator
 import com.khomenote.photo.PhotoStorage
+import com.khomenote.ui.common.CircleAddButton
 import com.khomenote.ui.common.MoreBelowIndicator
 import com.khomenote.ui.common.ReorderHandle
 import com.khomenote.ui.common.RowMoreMenu
@@ -146,22 +147,7 @@ class AssetDetailViewModel(
     }
 
     fun saveRepairRecord(existing: RepairRecordEntity?, input: RepairRecordInput) {
-        viewModelScope.launch {
-            repairRecordRepository.save(
-                RepairRecordEntity(
-                    id = existing?.id ?: 0,
-                    assetId = assetId,
-                    name = input.name,
-                    date = input.date,
-                    price = input.price,
-                    memo = input.memo,
-                    reminderLeadDays = input.reminderLeadDays,
-                    // 이 시트에는 구매처/사진 입력이 없다 — 완료 기록으로 남긴 값이 수정할 때 지워지면 안 된다.
-                    vendor = existing?.vendor,
-                    photoUri = existing?.photoUri,
-                )
-            )
-        }
+        viewModelScope.launch { repairRecordRepository.save(input.toEntity(assetId, existing)) }
     }
 
     /** "완료로 표시" — 실제 한 날·가격·구매처·영수증 사진·메모를 반영하고 알림을 꺼서 홈에서 빼되 기록은 남긴다. */
@@ -491,13 +477,12 @@ fun AssetDetailScreen(
 @Composable
 private fun SectionHeader(title: String, onAdd: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, modifier = Modifier.weight(1f), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        TextButton(onClick = onAdd) {
-            Text("+ 추가", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TealPrimary)
-        }
+        // 홈 헤더의 "+"와 같은 원형 버튼 — 오른쪽 끝이 아래 카드의 오른쪽 끝과 맞는다.
+        CircleAddButton(contentDescription = "$title 추가", onClick = onAdd)
     }
 }
 

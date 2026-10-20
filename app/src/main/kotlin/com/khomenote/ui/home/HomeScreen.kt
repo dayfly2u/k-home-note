@@ -72,8 +72,12 @@ import com.khomenote.domain.DueDateCalculator
 import com.khomenote.photo.PhotoStorage
 import com.khomenote.ui.asset.OneTimeDoneInput
 import com.khomenote.ui.asset.OneTimeDoneSheet
+import com.khomenote.ui.asset.RepairRecordInput
+import com.khomenote.ui.asset.RepairRecordSheet
 import com.khomenote.ui.asset.completedWith
+import com.khomenote.ui.asset.toEntity
 import com.khomenote.ui.common.AppIcons
+import com.khomenote.ui.common.CircleAddButton
 import com.khomenote.ui.item.ReplacementRecordSheet
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.MoreBelowIndicator
@@ -184,6 +188,11 @@ class HomeViewModel(
     /** 일회성작업 "완료로 표시" — 한 날·가격·구매처·영수증 사진·메모를 반영하고 알림을 꺼서(reminderLeadDays = null) 홈에서 뺀다. 기록은 대상 상세에 남는다. */
     fun completeOneTime(record: RepairRecordEntity, input: OneTimeDoneInput) {
         viewModelScope.launch { repairRecordRepository.save(record.completedWith(input)) }
+    }
+
+    /** 홈에서 꾹 눌러 연 일회성작업 수정 시트의 저장 — 대상 상세의 수정과 같은 저장 경로다. */
+    fun saveOneTime(record: RepairRecordEntity, input: RepairRecordInput) {
+        viewModelScope.launch { repairRecordRepository.save(input.toEntity(record.assetId, record)) }
     }
 
     // remember{}로 화면(Composable)에만 두면 항목 클릭 후 뒤로 왔을 때 화면이
@@ -299,16 +308,13 @@ private fun HomeHeader(
                 )
             }
             ViewModeToggle(viewMode, onViewModeChange)
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .border(1.dp, HEADER_BUTTON_BORDER, CircleShape)
-                    .clickable(onClick = onAddClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "추가", tint = Color.White, modifier = Modifier.size(20.dp))
-            }
+            CircleAddButton(
+                contentDescription = "추가",
+                onClick = onAddClick,
+                background = Color.Transparent,
+                borderColor = HEADER_BUTTON_BORDER,
+                iconTint = Color.White,
+            )
         }
         // 시안(MonthView.dc.html)의 달력 보기 헤더에는 요약 3칸이 없다.
         if (viewMode == HomeViewMode.LIST) {
@@ -495,6 +501,7 @@ fun HomeScreen(
         }
     }
     var completingOneTime by remember { mutableStateOf<HomeRowUiModel.OneTime?>(null) }
+    var editingOneTime by remember { mutableStateOf<HomeRowUiModel.OneTime?>(null) }
     var recordingRecurring by remember { mutableStateOf<HomeRowUiModel.Recurring?>(null) }
     var recordingOtherDates by remember { mutableStateOf<List<LocalDate>?>(null) }
     LaunchedEffect(recordingRecurring) {
@@ -523,10 +530,10 @@ fun HomeScreen(
             is HomeRowUiModel.OneTime -> completingOneTime = uiModel
         }
     }
-    // 꾹 누르기: 주기성작업은 수정 화면, 일회성작업은 동작 없음(수정/삭제는 모아보기 → 대상 상세에서).
+    // 꾹 누르기: 둘 다 수정 화면 — 주기성작업은 수정 폼 화면, 일회성작업은 수정 시트(삭제는 대상 상세에서).
     fun rowLongClick(uiModel: HomeRowUiModel): (() -> Unit)? = when (uiModel) {
         is HomeRowUiModel.Recurring -> ({ onEditRecurringItem(uiModel.status.item.id) })
-        is HomeRowUiModel.OneTime -> null
+        is HomeRowUiModel.OneTime -> ({ editingOneTime = uiModel })
     }
 
     val filteredItems = remember(items, categoryFilter) {
@@ -570,6 +577,18 @@ fun HomeScreen(
                 onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
             )
         }
+    }
+
+    editingOneTime?.let { target ->
+        RepairRecordSheet(
+            initial = target.record.record,
+            assetLabel = "${categories.firstOrNull { it.id == target.categoryId }?.emoji.orEmpty()} ${target.assetName}".trim(),
+            onDismiss = { editingOneTime = null },
+            onSave = { input ->
+                viewModel.saveOneTime(target.record.record, input)
+                editingOneTime = null
+            },
+        )
     }
 
     completingOneTime?.let { target ->
