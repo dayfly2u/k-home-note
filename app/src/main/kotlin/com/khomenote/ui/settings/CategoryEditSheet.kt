@@ -8,8 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -20,8 +21,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,22 +31,29 @@ import com.khomenote.ui.common.FormLabel
 import com.khomenote.ui.common.KModalSheet
 import com.khomenote.ui.common.KTextField
 import com.khomenote.ui.common.SheetButtons
-import com.khomenote.ui.theme.ChipBorderUnselected
+import com.khomenote.ui.theme.CardBorder
 import com.khomenote.ui.theme.OrangeUrgent
+import com.khomenote.ui.theme.SurfaceWhite
 import com.khomenote.ui.theme.TealContainer
 import com.khomenote.ui.theme.TealPrimary
+import com.khomenote.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
-/** 카테고리 추가/수정 시트에서 고를 수 있는, 생활(집/가전/자동차/카드) 위주의 이모지. 5x5로 배치. */
+/** 카테고리 추가/수정 시트에서 고를 수 있는, 생활(집/가전/자동차/카드/기념일) 위주의 이모지. 5열로 배치. */
 val CATEGORY_EMOJI_PALETTE = listOf(
     "🏠", "🔌", "🚗", "💳", "🚙",
     "🏍️", "🚲", "📺", "❄️", "🔥",
     "💧", "🧹", "🛋️", "🛁", "💡",
     "🏢", "🏡", "🐶", "📱", "💻",
     "🔧", "⚡", "🍽️", "🏦", "💰",
+    "🎂", "🎁", "💍", "🎉", "🙏",
 )
 
-/** [onDelete]가 있으면(= 수정 중일 때) 아래에 "카테고리 삭제" 버튼이 보인다. 삭제 확인은 호출하는 쪽에서 한다. */
+/**
+ * 카테고리 추가/수정 시트(시안 CategorySheet.dc.html). 다른 카테고리가 이미 쓰는 이모지는 처음부터 흐리게 보이고 누를 수 없다
+ * ([isEmojiTaken]은 수정 중인 카테고리 자신의 이모지는 제외하고 판단해 준다).
+ * [onDelete]가 있으면(= 수정 중일 때) 아래에 "카테고리 삭제" 버튼이 보인다. 삭제 확인은 호출하는 쪽에서 한다.
+ */
 @Composable
 fun CategoryEditSheet(
     initial: CategoryEntity?,
@@ -56,7 +64,14 @@ fun CategoryEditSheet(
     onDelete: (() -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(initial?.name ?: "") }
-    var emoji by remember { mutableStateOf(initial?.emoji ?: CATEGORY_EMOJI_PALETTE.first()) }
+    // 새로 만들 때는 아직 아무도 안 쓰는 이모지부터 골라 둔다.
+    var emoji by remember {
+        mutableStateOf(
+            initial?.emoji
+                ?: CATEGORY_EMOJI_PALETTE.firstOrNull { !isEmojiTaken(it) }
+                ?: CATEGORY_EMOJI_PALETTE.first(),
+        )
+    }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -67,22 +82,26 @@ fun CategoryEditSheet(
             fontWeight = FontWeight.Bold,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FormLabel("카테고리 이름")
-            KTextField(
-                value = name,
-                onValueChange = { name = it; error = null },
-                placeholder = "예: 가전, 자동차, 카드",
-            )
-            error?.let { Text(it, fontSize = 12.sp, color = OrangeUrgent) }
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FormLabel("아이콘")
-            CategoryEmojiGrid(selected = emoji, onSelected = { emoji = it })
-            if (isEmojiTaken(emoji)) {
-                Text("이미 다른 카테고리에서 사용 중인 이모지입니다.", fontSize = 12.sp, color = OrangeUrgent)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+            Box(
+                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(TealContainer),
+                contentAlignment = Alignment.Center,
+            ) { Text(emoji, fontSize = 26.sp) }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                FormLabel("카테고리 이름")
+                KTextField(
+                    value = name,
+                    onValueChange = { name = it; error = null },
+                    placeholder = "예: 가전, 자동차, 카드",
+                )
             }
+        }
+        error?.let { Text(it, fontSize = 12.sp, color = OrangeUrgent) }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormLabel("아이콘")
+            CategoryEmojiGrid(selected = emoji, isTaken = isEmojiTaken, onSelected = { emoji = it })
+            Text("흐린 아이콘은 다른 카테고리에서 쓰는 중이에요", fontSize = 12.sp, color = TextSecondary)
         }
 
         if (onDelete != null) {
@@ -109,24 +128,24 @@ fun CategoryEditSheet(
 }
 
 @Composable
-private fun CategoryEmojiGrid(selected: String, onSelected: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun CategoryEmojiGrid(selected: String, isTaken: (String) -> Boolean, onSelected: (String) -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         CATEGORY_EMOJI_PALETTE.chunked(5).forEach { rowEmojis ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 rowEmojis.forEach { candidate ->
                     val isSelected = candidate == selected
+                    val taken = isTaken(candidate) && !isSelected
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(if (isSelected) TealContainer else Color.Transparent)
-                            .border(
-                                if (isSelected) 2.dp else 1.dp,
-                                if (isSelected) TealPrimary else ChipBorderUnselected,
-                                CircleShape,
-                            )
-                            .clickable { onSelected(candidate) },
+                            .weight(1f)
+                            .height(48.dp)
+                            .alpha(if (taken) 0.3f else 1f)
+                            .clip(shape)
+                            .background(if (isSelected) TealContainer else SurfaceWhite)
+                            .border(if (isSelected) 2.dp else 1.dp, if (isSelected) TealPrimary else CardBorder, shape)
+                            .then(if (taken) Modifier else Modifier.clickable { onSelected(candidate) }),
                     ) {
                         Text(candidate, fontSize = 22.sp)
                     }
