@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -121,7 +122,8 @@ fun KTextField(
             .clip(shape)
             .background(SurfaceWhite)
             .border(if (focused) 1.5.dp else 1.dp, if (focused) TealPrimary else ChipBorderUnselected, shape)
-            .height(if (singleLine) 48.dp else 80.dp)
+            // 여러 줄 칸은 최소 80dp에서 글 길이에 맞춰 늘어난다 — 고정 높이면 3줄 이상 글이 잘려서 보이지도 고치지도 못한다.
+            .then(if (singleLine) Modifier.height(48.dp) else Modifier.heightIn(min = 80.dp))
             .padding(horizontal = 14.dp),
         contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart,
     ) {

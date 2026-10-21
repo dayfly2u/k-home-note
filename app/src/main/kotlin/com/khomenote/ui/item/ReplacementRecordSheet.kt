@@ -145,7 +145,8 @@ fun ReplacementRecordSheet(
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FormLabel("구매처/링크")
-            KTextField(value = vendor, onValueChange = { vendor = it }, placeholder = "선택")
+            // 여러 줄 칸 — 예전 버전에서 줄바꿈이 든 글을 구매처에 적어 둔 기록도 전부 보이고 고칠 수 있다.
+            KTextField(value = vendor, onValueChange = { vendor = it }, placeholder = "선택", singleLine = false)
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

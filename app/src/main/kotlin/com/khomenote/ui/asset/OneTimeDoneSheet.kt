@@ -152,7 +152,7 @@ fun OneTimeDoneSheet(
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FormLabel("구매처/링크")
-            KTextField(value = vendor, onValueChange = { vendor = it }, placeholder = "선택")
+            KTextField(value = vendor, onValueChange = { vendor = it }, placeholder = "선택", singleLine = false)
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
