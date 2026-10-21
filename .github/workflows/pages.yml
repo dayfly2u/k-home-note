@@ -1,0 +1,46 @@
+name: 사용 설명서 GitHub Pages 배포
+
+# docs/user-guide 폴더만 사이트로 올린다 — docs/design, docs/superpowers 같은 내부 문서는 공개 사이트에 포함하지 않는다.
+# 사용 설명서 주소: https://dayfly2u.github.io/k-home-note/user-guide/
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'docs/user-guide/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 사이트 조립 (사용 설명서만)
+        run: |
+          mkdir -p _site/user-guide
+          cp -r docs/user-guide/. _site/user-guide/
+          # 사이트 첫 주소로 들어오면 사용 설명서로 보낸다.
+          printf '%s\n' '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>생활달력</title><meta http-equiv="refresh" content="0; url=user-guide/"><link rel="canonical" href="user-guide/"></head><body><a href="user-guide/">생활달력 사용 설명서</a></body></html>' > _site/index.html
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
