@@ -36,5 +36,5 @@ internal fun nextDateNote(mode: CycleMode, isLunar: Boolean, month: Int?, day: I
     CycleMode.YEARLY ->
         if (isLunar) "음력 ${month}월 ${day}일을 매년 양력으로 바꿔서 알려드려요" else "매년 ${month}월 ${day}일에 돌아와요"
     CycleMode.MONTHLY -> "매달 ${monthlyDay}일에 돌아와요. 말일이 없는 달은 그 달의 마지막 날이에요"
-    CycleMode.INTERVAL -> "완료 기록을 남기면 그 날부터 다시 세요"
+    CycleMode.INTERVAL -> "이력을 기록하면 그 날부터 다시 세요"
 }

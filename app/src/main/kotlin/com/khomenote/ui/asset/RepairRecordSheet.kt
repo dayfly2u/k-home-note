@@ -133,7 +133,8 @@ fun RepairRecordSheet(
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FormLabel("메모")
-            KTextField(value = memo, onValueChange = { memo = it }, placeholder = "선택")
+            // 여러 줄 칸 — "완료로 표시" 시트의 메모와 같게, 줄바꿈이 든 글도 전부 보이고 고칠 수 있다.
+            KTextField(value = memo, onValueChange = { memo = it }, placeholder = "선택", singleLine = false)
         }
 
         val cardShape = RoundedCornerShape(16.dp)

@@ -332,7 +332,7 @@ fun ItemDetailScreen(
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.size(8.dp))
-                    Text("완료 기록하기", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("이력 기록하기", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
 
                 val count = StatValue(records.size.toString(), "회")

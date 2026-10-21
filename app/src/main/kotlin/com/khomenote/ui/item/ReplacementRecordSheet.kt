@@ -59,7 +59,7 @@ data class ReplacementRecordInput(
 private val NEXT_DUE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월 d일", Locale.KOREAN)
 
 /**
- * 주기성작업의 완료 기록(교체/구매 이력)을 남기거나 고치는 바텀시트(시안 Done.dc.html).
+ * 주기성작업의 이력(교체/구매 기록)을 남기거나 고치는 바텀시트(시안 Done.dc.html).
  * [initial]이 있으면 수정. 시트 아래에는 이 날짜로 기록했을 때 다음 예정일이 언제로 넘어가는지 미리 보여준다 —
  * [otherRecordDates]는 이 기록을 뺀 나머지 기록 날짜들(다음 예정일은 가장 최근 기록 기준이라 필요하다).
  */
@@ -123,7 +123,7 @@ fun ReplacementRecordSheet(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(assetName, fontSize = 12.sp, color = TextSecondary)
                 Text(
-                    if (initial == null) "${item.name} 완료" else "${item.name} 기록 수정",
+                    if (initial == null) "${item.name} 이력 기록" else "${item.name} 이력 수정",
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -199,7 +199,7 @@ fun ReplacementRecordSheet(
         }
 
         SheetButtons(
-            confirmLabel = if (initial == null) "완료 기록" else "저장",
+            confirmLabel = if (initial == null) "이력 기록" else "저장",
             confirmIcon = Icons.Default.Check,
             onCancel = { discardPickedPhotoAndDismiss() },
             onConfirm = {

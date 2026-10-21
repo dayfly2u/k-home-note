@@ -155,7 +155,7 @@ class HomeViewModel(
     suspend fun recordDatesFor(itemId: Long): List<LocalDate> =
         replacementRecordRepository.getByItem(itemId).first().map { it.date }
 
-    /** 상세 화면의 "완료 기록하기"와 같은 저장 경로. */
+    /** 상세 화면의 "이력 기록하기"와 같은 저장 경로. */
     fun recordReplacement(itemId: Long, date: LocalDate, price: Long?, vendor: String?, photoUri: String?, memo: String?) {
         viewModelScope.launch {
             replacementRecordRepository.add(
@@ -523,7 +523,7 @@ fun HomeScreen(
     }
 
     // 목록과 달력 보기가 같은 행 동작을 쓴다.
-    // 누르기: 주기성작업은 "완료 기록" 시트, 일회성작업은 "완료로 표시" 시트 — 둘 다 "끝냈다"는 기록을 남기는 동작이다.
+    // 누르기: 주기성작업은 "이력 기록" 시트, 일회성작업은 "완료로 표시" 시트 — 둘 다 "끝냈다"는 기록을 남기는 동작이다.
     fun handleRowClick(uiModel: HomeRowUiModel) {
         when (uiModel) {
             is HomeRowUiModel.Recurring -> recordingRecurring = uiModel
