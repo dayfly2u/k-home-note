@@ -37,4 +37,16 @@ interface RepairRecordDao {
         """
     )
     fun getPendingReminders(): Flow<List<RepairRecordWithAsset>>
+
+    // 알림이 꺼진(= 이미 끝낸 기록) 일회성작업 — 홈 달력의 "한 일" 표시용.
+    @Query(
+        """
+        SELECT rr.*, a.name AS assetName, a.categoryId AS categoryId
+        FROM repair_records rr
+        INNER JOIN assets a ON a.id = rr.assetId
+        WHERE rr.reminderLeadDays IS NULL
+        ORDER BY rr.date DESC, rr.id DESC
+        """
+    )
+    fun getCompletedWithAsset(): Flow<List<RepairRecordWithAsset>>
 }

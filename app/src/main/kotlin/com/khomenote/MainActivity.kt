@@ -216,6 +216,8 @@ private fun AppRoot(container: AppContainer, backStack: SnapshotStateList<Screen
                     onAddRecurringItem = { assetId -> push(Screen.ItemForm(assetId, null)) },
                     onAddOneTimeTask = { assetId -> push(Screen.AssetDetail(assetId, openOneTimeForm = true)) },
                     onConvertToRecurring = { assetId, name -> push(Screen.ItemForm(assetId, null, name)) },
+                    onOpenItem = { itemId -> push(Screen.ItemDetail(itemId)) },
+                    onOpenAsset = { assetId -> push(Screen.AssetDetail(assetId)) },
                     reopenAddSheetForAsset = pendingAddSheetAssetId,
                     onReopenHandled = { pendingAddSheetAssetId = null },
                 )

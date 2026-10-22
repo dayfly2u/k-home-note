@@ -24,6 +24,18 @@ internal fun monthCells(month: YearMonth): List<LocalDate?> {
 internal fun dotUrgencies(bands: List<DueBand>): List<Boolean> =
     bands.map { it == DueBand.OVERDUE || it == DueBand.DUE_SOON }.sortedByDescending { it }.take(3)
 
+/**
+ * 달력이 보여주는 달과 선택한 날. ViewModel이 들고 있어서, 이력 줄을 눌러 상세 화면에 갔다가 돌아와도
+ * 보던 달·날짜 그대로 다시 열린다.
+ */
+internal data class CalendarPosition(val month: YearMonth, val selected: LocalDate) {
+    /** [deltaMonths]만큼 달을 옮긴다 — 이번 달이면 오늘, 아니면 그 달 1일을 선택한다. */
+    fun movedBy(deltaMonths: Long, today: LocalDate): CalendarPosition {
+        val next = month.plusMonths(deltaMonths)
+        return CalendarPosition(next, if (next == YearMonth.from(today)) today else next.atDay(1))
+    }
+}
+
 private val MONTH_TITLE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)
 private val DAY_TITLE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN)
 

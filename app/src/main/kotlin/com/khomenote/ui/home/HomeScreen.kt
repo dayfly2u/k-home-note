@@ -106,6 +106,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -193,6 +194,26 @@ class HomeViewModel(
     /** 홈에서 꾹 눌러 연 일회성작업 수정 시트의 저장 — 대상 상세의 수정과 같은 저장 경로다. */
     fun saveOneTime(record: RepairRecordEntity, input: RepairRecordInput) {
         viewModelScope.launch { repairRecordRepository.save(input.toEntity(record.assetId, record)) }
+    }
+
+    /** 홈 달력의 "한 일" — 주기성작업의 이력과 끝낸 일회성작업. 카테고리 필터는 화면에서 적용한다. */
+    val history: StateFlow<List<HistoryRowUiModel>> = combine(
+        replacementRecordRepository.getAllWithItem(),
+        repairRecordRepository.getCompletedWithAsset(),
+    ) { recurring, oneTime ->
+        recurring.map { it.toHistoryRow() } + oneTime.map { it.toHistoryRow() }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 달력이 보는 달·선택한 날도 필터처럼 화면을 나갔다 와도 유지한다(이력 줄을 눌러 상세에 갔다 돌아오는 흐름).
+    private val _calendarPosition = MutableStateFlow(CalendarPosition(YearMonth.now(), LocalDate.now()))
+    internal val calendarPosition: StateFlow<CalendarPosition> = _calendarPosition
+
+    fun selectCalendarDate(date: LocalDate) {
+        _calendarPosition.value = _calendarPosition.value.copy(selected = date)
+    }
+
+    fun moveCalendarMonth(deltaMonths: Long) {
+        _calendarPosition.value = _calendarPosition.value.movedBy(deltaMonths, LocalDate.now())
     }
 
     // remember{}로 화면(Composable)에만 두면 항목 클릭 후 뒤로 왔을 때 화면이
@@ -482,6 +503,10 @@ fun HomeScreen(
     onAddRecurringItem: (Long) -> Unit,
     onAddOneTimeTask: (Long) -> Unit,
     onConvertToRecurring: (assetId: Long, name: String) -> Unit,
+    /** 달력 "한 일"에서 주기성작업 이력 줄을 눌렀을 때 — 그 주기성작업의 상세 화면. */
+    onOpenItem: (itemId: Long) -> Unit,
+    /** 달력 "한 일"에서 끝낸 일회성작업 줄을 눌렀을 때 — 그 대상의 상세 화면. */
+    onOpenAsset: (assetId: Long) -> Unit,
     reopenAddSheetForAsset: Long?,
     onReopenHandled: () -> Unit,
 ) {
@@ -489,6 +514,8 @@ fun HomeScreen(
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val categoryFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
     val assets by viewModel.assets.collectAsStateWithLifecycle()
+    val history by viewModel.history.collectAsStateWithLifecycle()
+    val calendarPosition by viewModel.calendarPosition.collectAsStateWithLifecycle()
     var showAddSheet by remember { mutableStateOf(false) }
     var addSheetInitialAssetId by remember { mutableStateOf<Long?>(null) }
 
@@ -538,6 +565,9 @@ fun HomeScreen(
 
     val filteredItems = remember(items, categoryFilter) {
         items.filter { categoryFilter == null || it.categoryId == categoryFilter }
+    }
+    val filteredHistory = remember(history, categoryFilter) {
+        history.filter { categoryFilter == null || it.categoryId == categoryFilter }
     }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -642,8 +672,18 @@ fun HomeScreen(
             if (viewMode == HomeViewMode.CALENDAR) {
                 HomeMonthView(
                     items = filteredItems,
+                    history = filteredHistory,
+                    position = calendarPosition,
+                    onMoveMonth = { viewModel.moveCalendarMonth(it) },
+                    onSelectDate = { viewModel.selectCalendarDate(it) },
                     onRowClick = { handleRowClick(it) },
                     onRowLongClick = { rowLongClick(it) },
+                    onHistoryClick = { row ->
+                        when (row.kind) {
+                            HistoryKind.RECURRING -> onOpenItem(row.targetId)
+                            HistoryKind.ONE_TIME -> onOpenAsset(row.targetId)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                 )
                 return@Scaffold

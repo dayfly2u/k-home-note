@@ -41,6 +41,8 @@ val OnceTagBorder = Color(0xFFA9C7C5)
 // 주기성작업과 한눈에 구분되도록 2026-10-20에 다시 도입했다(청록 한 가지 + 주황 규칙의 의도된 예외).
 val OneTimeYellow = Color(0xFFFFF9C4)
 val OneTimeYellowRing = Color(0xFFF2C200)
+// 이미 끝낸 일회성작업이 있는 날(지난 이력)의 연한 노란 원 — 예정(진한 노란 원)보다 한 단계 흐리게.
+val OneTimeYellowRingLight = Color(0xFFF7E49A)
 
 private val KHomeNoteColorScheme = lightColorScheme(
     primary = TealPrimary,

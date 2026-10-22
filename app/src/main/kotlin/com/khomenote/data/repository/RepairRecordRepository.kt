@@ -12,6 +12,8 @@ class RepairRecordRepository(private val repairRecordDao: RepairRecordDao) {
 
     fun getPendingReminders(): Flow<List<RepairRecordWithAsset>> = repairRecordDao.getPendingReminders()
 
+    fun getCompletedWithAsset(): Flow<List<RepairRecordWithAsset>> = repairRecordDao.getCompletedWithAsset()
+
     suspend fun save(record: RepairRecordEntity): Long =
         if (record.id == 0L) repairRecordDao.insert(record) else { repairRecordDao.update(record); record.id }
 
