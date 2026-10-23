@@ -618,6 +618,8 @@ fun HomeScreen(
                 viewModel.saveOneTime(target.record.record, input)
                 editingOneTime = null
             },
+            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
         )
     }
 

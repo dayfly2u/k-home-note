@@ -1,5 +1,6 @@
 package com.khomenote.ui.asset
 
+import android.net.Uri
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,7 +39,11 @@ import com.khomenote.ui.common.KTextField
 import com.khomenote.ui.common.SheetButtons
 import com.khomenote.ui.common.StepperButton
 import com.khomenote.ui.common.formatReminderTime
+import com.khomenote.ui.item.ReceiptPhotoButton
+import com.khomenote.ui.item.ReceiptPhotoError
 import com.khomenote.ui.item.reminderExplanation
+import com.khomenote.ui.item.rememberReceiptPhoto
+import com.khomenote.ui.item.rememberReceiptPhotoPicker
 import com.khomenote.ui.theme.CardBorder
 import com.khomenote.ui.theme.ChipBorderUnselected
 import com.khomenote.ui.theme.NumberFontFamily
@@ -51,14 +56,13 @@ data class RepairRecordInput(
     val name: String,
     val date: LocalDate,
     val price: Long?,
+    val vendor: String?,
+    val photoUri: String?,
     val memo: String?,
     val reminderLeadDays: Int?,
 )
 
-/**
- * 입력값으로 만든 저장용 기록. 수정이면 [existing]의 id를 이어받고, 이 시트에는 구매처/사진 입력이 없으므로
- * 완료 기록으로 남긴 값이 수정할 때 지워지지 않게 [existing]의 것을 그대로 가져온다.
- */
+/** 입력값으로 만든 저장용 기록. 수정이면 [existing]의 id를 이어받는다(시트가 기존 구매처/사진을 채워서 열므로 입력값이 곧 최종값이다). */
 fun RepairRecordInput.toEntity(assetId: Long, existing: RepairRecordEntity?): RepairRecordEntity = RepairRecordEntity(
     id = existing?.id ?: 0,
     assetId = assetId,
@@ -67,8 +71,8 @@ fun RepairRecordInput.toEntity(assetId: Long, existing: RepairRecordEntity?): Re
     price = price,
     memo = memo,
     reminderLeadDays = reminderLeadDays,
-    vendor = existing?.vendor,
-    photoUri = existing?.photoUri,
+    vendor = vendor,
+    photoUri = photoUri,
 )
 
 /**
@@ -83,16 +87,26 @@ fun RepairRecordSheet(
     assetLabel: String?,
     onDismiss: () -> Unit,
     onSave: (RepairRecordInput) -> Unit,
+    onPickPhoto: suspend (Uri) -> String?,
+    onDiscardPhoto: (String) -> Unit = {},
 ) {
     var name by remember { mutableStateOf(initial?.name ?: "") }
     var selectedDate by remember { mutableStateOf(initial?.date ?: LocalDate.now()) }
     var priceText by remember { mutableStateOf(initial?.price?.toString() ?: "") }
+    var vendor by remember { mutableStateOf(initial?.vendor ?: "") }
     var memo by remember { mutableStateOf(initial?.memo ?: "") }
+    val photo = rememberReceiptPhoto(initial?.photoUri, onDiscardPhoto)
+    val pickPhoto = rememberReceiptPhotoPicker(photo, onPickPhoto)
     var reminderEnabled by remember { mutableStateOf(initial?.reminderLeadDays != null) }
     var reminderLeadDays by remember { mutableStateOf(initial?.reminderLeadDays ?: 3) }
     val (alertHour, alertMinute) = ReminderScheduler.getTime(LocalContext.current)
 
-    KModalSheet(onDismiss = onDismiss) {
+    fun discardUnsavedAndDismiss() {
+        photo.discardUnsaved()
+        onDismiss()
+    }
+
+    KModalSheet(onDismiss = { discardUnsavedAndDismiss() }) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (initial == null) "일회성작업 추가" else "일회성작업 수정",
@@ -130,6 +144,15 @@ fun RepairRecordSheet(
                 )
             }
         }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            FormLabel("구매처/링크")
+            // 여러 줄 칸 — 다른 시트의 구매처 칸과 같다(예전에 줄바꿈이 든 글을 적어 둔 기록도 전부 보이고 고칠 수 있다).
+            KTextField(value = vendor, onValueChange = { vendor = it }, placeholder = "선택", singleLine = false)
+        }
+
+        ReceiptPhotoButton(photo, onClick = pickPhoto, modifier = Modifier.fillMaxWidth())
+        ReceiptPhotoError(photo)
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FormLabel("메모")
@@ -186,7 +209,7 @@ fun RepairRecordSheet(
         Spacer(Modifier.height(2.dp))
         SheetButtons(
             confirmLabel = "저장",
-            onCancel = onDismiss,
+            onCancel = { discardUnsavedAndDismiss() },
             confirmEnabled = name.isNotBlank(),
             onConfirm = {
                 onSave(
@@ -194,6 +217,8 @@ fun RepairRecordSheet(
                         name = name.trim(),
                         date = selectedDate,
                         price = priceText.toLongOrNull(),
+                        vendor = vendor.takeIf { it.isNotBlank() },
+                        photoUri = photo.commit(),
                         memo = memo.takeIf { it.isNotBlank() },
                         reminderLeadDays = if (reminderEnabled) reminderLeadDays else null,
                     )

@@ -287,6 +287,8 @@ fun AssetDetailScreen(
                 viewModel.saveRepairRecord(null, input)
                 showRepairDialog = false
             },
+            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
         )
     }
 
@@ -299,6 +301,8 @@ fun AssetDetailScreen(
                 viewModel.saveRepairRecord(target, input)
                 editingRepairRecord = null
             },
+            onPickPhoto = { uri -> viewModel.pickPhoto(uri) },
+            onDiscardPhoto = { path -> viewModel.discardPhoto(path) },
         )
     }
 
