@@ -537,11 +537,12 @@ fun HomeScreen(
     }
 
     // 목록/달력 보기 선택은 앱을 껐다 켜도 유지한다(DB가 아니라 가벼운 설정값이라 SharedPreferences).
+    // 처음 설치해서 고른 적이 없으면 달력으로 시작한다.
     val context = LocalContext.current
     val homePrefs = remember { context.getSharedPreferences("home_prefs", Context.MODE_PRIVATE) }
     var viewMode by remember {
         mutableStateOf(
-            runCatching { HomeViewMode.valueOf(homePrefs.getString("view_mode", null) ?: "LIST") }.getOrDefault(HomeViewMode.LIST),
+            runCatching { HomeViewMode.valueOf(homePrefs.getString("view_mode", null) ?: "CALENDAR") }.getOrDefault(HomeViewMode.CALENDAR),
         )
     }
     fun changeViewMode(mode: HomeViewMode) {
