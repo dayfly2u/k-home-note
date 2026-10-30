@@ -445,7 +445,8 @@ private fun HeroCard(status: ConsumableItemWithStatus, nextDueDate: LocalDate, d
                 Text(reminderText, fontSize = 12.sp, color = TextSecondary)
             }
             if (!item.memo.isNullOrBlank()) {
-                Text(item.memo, fontSize = 12.sp, color = TextSecondary, maxLines = 2)
+                // 메모는 입력 때 3줄로 제한하므로 잘라내지 않고 전부 보여준다.
+                Text(item.memo, fontSize = 12.sp, color = TextSecondary)
             }
         }
     }

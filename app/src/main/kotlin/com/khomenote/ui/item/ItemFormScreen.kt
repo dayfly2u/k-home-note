@@ -47,12 +47,14 @@ import com.khomenote.domain.DueDateCalculator
 import com.khomenote.notification.ReminderScheduler
 import com.khomenote.ui.common.FormCard
 import com.khomenote.ui.common.FormTopBar
+import com.khomenote.ui.common.ITEM_MEMO_MAX_LINES
 import com.khomenote.ui.common.KFilterChip
 import com.khomenote.ui.common.KTextField
 import com.khomenote.ui.common.NumberBox
 import com.khomenote.ui.common.RadioSegment
 import com.khomenote.ui.common.SegmentedTabs
 import com.khomenote.ui.common.StepperButton
+import com.khomenote.ui.common.acceptMemoEdit
 import com.khomenote.ui.common.formatReminderTime
 import com.khomenote.ui.home.dDayStyle
 import com.khomenote.ui.theme.CardBorder
@@ -213,7 +215,7 @@ class ItemFormViewModel(
     fun onYearlyMonthChange(value: String) { yearlyMonthText = value.filter(Char::isDigit) }
     fun onYearlyDayChange(value: String) { yearlyDayText = value.filter(Char::isDigit) }
     fun onYearlyIsLunarChange(value: Boolean) { yearlyIsLunar = value }
-    fun onMemoChange(value: String) { memo = value }
+    fun onMemoChange(value: String) { memo = acceptMemoEdit(memo, value) }
 
     fun stepReminderLeadDays(delta: Int) {
         reminderLeadDaysText = (reminderLeadDays + delta).coerceIn(0, 365).toString()
@@ -450,7 +452,7 @@ fun ItemFormScreen(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FieldLabel("메모")
+                FieldLabel("메모 (최대 ${ITEM_MEMO_MAX_LINES}줄)")
                 KTextField(
                     value = viewModel.memo,
                     onValueChange = viewModel::onMemoChange,

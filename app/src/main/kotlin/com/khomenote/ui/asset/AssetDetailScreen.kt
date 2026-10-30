@@ -387,7 +387,8 @@ fun AssetDetailScreen(
                         uiState.category?.let { Text(it.name, fontSize = 12.sp, color = TextSecondary) }
                         Text(asset.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (!asset.memo.isNullOrBlank()) {
-                            Text(asset.memo, fontSize = 12.sp, color = TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            // 대상 메모는 줄 수 제한 없이 전부 보여준다(화면 전체가 스크롤된다).
+                            Text(asset.memo, fontSize = 12.sp, color = TextSecondary)
                         }
                     }
                 }

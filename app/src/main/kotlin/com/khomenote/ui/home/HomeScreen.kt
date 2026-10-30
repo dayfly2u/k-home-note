@@ -498,12 +498,11 @@ internal fun HomeRow(uiModel: HomeRowUiModel, onClick: () -> Unit, onLongClick: 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onEditRecurringItem: (Long) -> Unit,
     onAddAsset: () -> Unit,
     onAddRecurringItem: (Long) -> Unit,
     onAddOneTimeTask: (Long) -> Unit,
     onConvertToRecurring: (assetId: Long, name: String) -> Unit,
-    /** 달력 "한 일"에서 주기성작업 이력 줄을 눌렀을 때 — 그 주기성작업의 상세 화면. */
+    /** 주기성작업 줄을 꾹 눌렀을 때, 달력 "한 일"에서 주기성작업 이력 줄을 눌렀을 때 — 그 주기성작업의 상세 화면. */
     onOpenItem: (itemId: Long) -> Unit,
     /** 달력 "한 일"에서 끝낸 일회성작업 줄을 눌렀을 때 — 그 대상의 상세 화면. */
     onOpenAsset: (assetId: Long) -> Unit,
@@ -558,9 +557,9 @@ fun HomeScreen(
             is HomeRowUiModel.OneTime -> completingOneTime = uiModel
         }
     }
-    // 꾹 누르기: 둘 다 수정 화면 — 주기성작업은 수정 폼 화면, 일회성작업은 수정 시트(삭제는 대상 상세에서).
+    // 꾹 누르기: 주기성작업은 그 작업의 상세 화면(수정은 거기서), 일회성작업은 수정 시트(삭제는 대상 상세에서).
     fun rowLongClick(uiModel: HomeRowUiModel): (() -> Unit)? = when (uiModel) {
-        is HomeRowUiModel.Recurring -> ({ onEditRecurringItem(uiModel.status.item.id) })
+        is HomeRowUiModel.Recurring -> ({ onOpenItem(uiModel.status.item.id) })
         is HomeRowUiModel.OneTime -> ({ editingOneTime = uiModel })
     }
 
