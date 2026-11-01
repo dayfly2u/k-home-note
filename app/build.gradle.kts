@@ -12,8 +12,8 @@ android {
         applicationId = "com.khomenote"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.7.9"
+        versionCode = 10
+        versionName = "0.8.0"
     }
 
     buildTypes {
