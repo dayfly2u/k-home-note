@@ -16,7 +16,7 @@ object DueDateCalculator {
      * (예: 30일 지정인데 25일에 처리) 늦게 처리했든(예: 30일을 놓쳐서 다음 달 4일에 처리) 똑같이 그
      * 가장 가까운 지정일 하나를 처리한 것으로 보고 "그다음" occurrence가 다음 예정일이 된다. 아직 이력이
      * 없어 itemCreatedAt을 기준으로 잡을 때는 기존처럼 base 이후 가장 가까운 지정일을 찾는다(이번 달
-     * 지정일이 안 지났으면 이번 달 그대로).
+     * 지정일이 안 지났으면 이번 달 그대로 — 만든 날이 바로 지정일이어도 그날 그대로 잡는다).
      */
     fun nextDueDate(
         itemCreatedAt: LocalDate,
@@ -39,7 +39,8 @@ object DueDateCalculator {
         }
     }
 
-    // forceNextPeriod=false: base 이후로 가장 가까운 dayOfMonth를 찾는다(이번 달 지정일이 안 지났으면 이번 달 그대로).
+    // forceNextPeriod=false: base 이후로 가장 가까운 dayOfMonth를 찾는다(이번 달 지정일이 안 지났으면 이번 달 그대로,
+    // base 당일이 지정일이어도 아직 안 지난 것으로 본다).
     // forceNextPeriod=true: base와 가장 가까운(이전 달이든 다음 달이든) occurrence를 "처리한 것"으로 보고
     // 그 바로 다음 occurrence로 넘어간다 — base가 속한 달의 지정일만 보고 무조건 base+1달로 넘기면,
     // 이미 한 달 넘게 밀려서 처리한 경우(예: 9/30 지정일을 10/4에 처리) 10/30이 아니라 11/30으로
@@ -48,7 +49,7 @@ object DueDateCalculator {
     private fun nextMonthlyDueDate(base: LocalDate, dayOfMonth: Int, forceNextPeriod: Boolean): LocalDate {
         val thisMonth = clampedMonthlyDate(base, dayOfMonth)
         if (!forceNextPeriod) {
-            if (thisMonth.isAfter(base)) return thisMonth
+            if (!thisMonth.isBefore(base)) return thisMonth
             return clampedMonthlyDate(base.plusMonths(1), dayOfMonth)
         }
         val fulfilled = nearestMonthlyOccurrence(base, dayOfMonth, thisMonth)
@@ -73,7 +74,7 @@ object DueDateCalculator {
     private fun nextYearlyDueDate(base: LocalDate, month: Int, dayOfMonth: Int, forceNextPeriod: Boolean): LocalDate {
         val thisYear = clampedYearlyDate(base.year, month, dayOfMonth)
         if (!forceNextPeriod) {
-            if (thisYear.isAfter(base)) return thisYear
+            if (!thisYear.isBefore(base)) return thisYear
             return clampedYearlyDate(base.year + 1, month, dayOfMonth)
         }
         val fulfilled = nearestYearlyOccurrence(base, month, dayOfMonth, thisYear)
@@ -100,7 +101,7 @@ object DueDateCalculator {
     private fun nextYearlyLunarDueDate(base: LocalDate, lunarMonth: Int, lunarDay: Int, forceNextPeriod: Boolean): LocalDate {
         val thisYear = lunarToSolar(base.year, lunarMonth, lunarDay)
         if (!forceNextPeriod) {
-            if (thisYear != null && thisYear.isAfter(base)) return thisYear
+            if (thisYear != null && !thisYear.isBefore(base)) return thisYear
             return nextValidLunarOccurrence(base.year, lunarMonth, lunarDay)
         }
         val fulfilledYear = nearestLunarOccurrenceYear(base, thisYear, lunarMonth, lunarDay)

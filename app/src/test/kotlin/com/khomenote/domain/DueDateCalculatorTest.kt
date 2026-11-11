@@ -125,6 +125,56 @@ class DueDateCalculatorTest {
     }
 
     @Test
+    fun `nextDueDate with yearly fixed date counts today when the item is created on its own due date`() {
+        // 빼빼로데이(11/11)에 "매년 11/11" 일정을 새로 넣으면, 오늘이 바로 예정일이라 내년이 아니라 오늘로 잡혀야 한다.
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 11, 11),
+            cycleDays = 365,
+            latestRecordDate = null,
+            yearlyDueMonth = 11,
+            yearlyDueDay = 11,
+        )
+        assertEquals(LocalDate.of(2026, 11, 11), result)
+    }
+
+    @Test
+    fun `nextDueDate with yearly fixed date still rolls to next year when the item is created the day after its due date`() {
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 11, 12),
+            cycleDays = 365,
+            latestRecordDate = null,
+            yearlyDueMonth = 11,
+            yearlyDueDay = 11,
+        )
+        assertEquals(LocalDate.of(2027, 11, 11), result)
+    }
+
+    @Test
+    fun `nextDueDate with monthly fixed day counts today when the item is created on its own due day`() {
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2026, 11, 11),
+            cycleDays = 30,
+            latestRecordDate = null,
+            monthlyDueDay = 11,
+        )
+        assertEquals(LocalDate.of(2026, 11, 11), result)
+    }
+
+    @Test
+    fun `nextDueDate with lunar yearly date counts today when the item is created on its own due date`() {
+        val dueDay = solarFor(2026, 8, 15)
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = dueDay,
+            cycleDays = 365,
+            latestRecordDate = null,
+            yearlyDueMonth = 8,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = true,
+        )
+        assertEquals(dueDay, result)
+    }
+
+    @Test
     fun `nextDueDate with yearly fixed date rolls over to next year once this year's date has passed`() {
         val result = DueDateCalculator.nextDueDate(
             itemCreatedAt = LocalDate.of(2027, 1, 1),
