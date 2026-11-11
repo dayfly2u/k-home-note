@@ -238,6 +238,37 @@ class DueDateCalculatorTest {
     }
 
     @Test
+    fun `nextDueDate with a late lunar month created early in the solar year uses the previous lunar year's date`() {
+        // 음력 2026년 12월 15일은 양력 2027년 1월 하순이다. 2027-01-10에 등록하면 그 날이 가장 가까운 예정일이어야 한다
+        // (음력 2027년 12월 15일 = 2028년 1월로 한 해를 건너뛰면 안 된다).
+        val expected = solarFor(2026, 12, 15)
+        assertTrue(expected.isAfter(LocalDate.of(2027, 1, 10)) && expected.year == 2027)
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = LocalDate.of(2027, 1, 10),
+            cycleDays = 30,
+            latestRecordDate = null,
+            yearlyDueMonth = 12,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = true,
+        )
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun `nextDueDate with a late lunar month moves to this lunar year once the previous lunar year's date has passed`() {
+        val previous = solarFor(2026, 12, 15)
+        val result = DueDateCalculator.nextDueDate(
+            itemCreatedAt = previous.plusDays(1),
+            cycleDays = 30,
+            latestRecordDate = null,
+            yearlyDueMonth = 12,
+            yearlyDueDay = 15,
+            yearlyDueIsLunar = true,
+        )
+        assertEquals(solarFor(2027, 12, 15), result)
+    }
+
+    @Test
     fun `nextDueDate with lunar yearly date rolls over to next lunar year once this year's solar date has passed`() {
         val thisYear = solarFor(2027, 3, 15)
         val nextYear = solarFor(2028, 3, 15)

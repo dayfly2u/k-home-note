@@ -19,7 +19,7 @@ object ReminderScheduler {
     private const val UNIQUE_WORK_NAME = "reminder_daily_check"
     private const val DEFAULT_HOUR = 8
     private const val DEFAULT_MINUTE = 0
-    private val ZONE: ZoneId = ZoneId.of("Asia/Seoul") // 기기 타임존에 기대지 않고 명시
+    internal val ZONE: ZoneId = ZoneId.of("Asia/Seoul") // 기기 타임존에 기대지 않고 명시
 
     // 이 앱은 원래 같은 이름(UNIQUE_WORK_NAME)으로 PeriodicWorkRequest(24시간 간격)를 썼다.
     // ensureScheduled가 KEEP을 쓰기 때문에, 이미 설치되어 있던 기기에서는 그 예전 주기적 작업이

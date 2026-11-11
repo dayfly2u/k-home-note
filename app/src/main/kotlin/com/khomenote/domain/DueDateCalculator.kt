@@ -101,7 +101,14 @@ object DueDateCalculator {
     private fun nextYearlyLunarDueDate(base: LocalDate, lunarMonth: Int, lunarDay: Int, forceNextPeriod: Boolean): LocalDate {
         val thisYear = lunarToSolar(base.year, lunarMonth, lunarDay)
         if (!forceNextPeriod) {
-            if (thisYear != null && !thisYear.isBefore(base)) return thisYear
+            // 음력 해와 양력 해는 어긋난다 — 음력 11·12월은 양력으로 다음 해 1·2월에 온다. 그래서 양력 1·2월에 만든
+            // 항목은 "전년도 음력 해"의 날짜가 바로 앞에 있을 수 있다(예: 2027-01-10에 음력 12/15를 등록하면 가장
+            // 가까운 날은 음력 2026년 12/15 = 2027년 1월 하순). base.year의 음력 해만 보면 그 날을 건너뛰고 한 해
+            // 뒤로 잡히므로, 전년도 음력 해부터 차례로 보고 base 이후(당일 포함) 첫 날짜를 고른다.
+            for (lunarYear in base.year - 1..base.year + 5) {
+                val candidate = lunarToSolar(lunarYear, lunarMonth, lunarDay) ?: continue
+                if (!candidate.isBefore(base)) return candidate
+            }
             return nextValidLunarOccurrence(base.year, lunarMonth, lunarDay)
         }
         val fulfilledYear = nearestLunarOccurrenceYear(base, thisYear, lunarMonth, lunarDay)

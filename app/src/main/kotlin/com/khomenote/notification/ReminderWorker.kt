@@ -15,6 +15,13 @@ import java.time.temporal.ChronoUnit
 
 private const val TAG = "ReminderWorker"
 
+/** 남은 날 수에 맞는 알림 문구. 예정일이 지난 항목에 "오늘"이라고 알리지 않도록 지난 경우를 따로 둔다. */
+internal fun dueText(daysLeft: Long, today: String, overdue: String, ahead: String): String = when {
+    daysLeft < 0 -> overdue.format(-daysLeft)
+    daysLeft == 0L -> today
+    else -> ahead.format(daysLeft)
+}
+
 class ReminderWorker(
     context: Context,
     params: WorkerParameters,
@@ -39,7 +46,9 @@ class ReminderWorker(
 
     private suspend fun runReminderCheck() {
         val container = AppContainer.getInstance(applicationContext)
-        val today = LocalDate.now()
+        // 예약(매일 08:00)을 한국 시간으로 잡으므로 "오늘"도 같은 시간대로 본다 — 기기 시간대를 쓰면 해외에서
+        // 08:00 KST가 현지로는 전날이어서 하루 어긋난 날짜로 계산한다.
+        val today = LocalDate.now(ReminderScheduler.ZONE)
 
         checkConsumableItems(container, today)
         checkOneTimeTasks(container, today)
@@ -70,7 +79,7 @@ class ReminderWorker(
         targets.forEach { target ->
             val status = itemsWithStatus.first { it.item.id == target.consumableItemId }
             val daysLeft = ChronoUnit.DAYS.between(today, target.nextDueDate)
-            val contentText = if (daysLeft <= 0) "오늘이 교체일이에요" else "${daysLeft}일 후 교체 예정이에요"
+            val contentText = dueText(daysLeft, today = "오늘이 교체일이에요", overdue = "교체일이 %d일 지났어요", ahead = "%d일 후 교체 예정이에요")
             val posted = showReminderNotification(
                 context = applicationContext,
                 consumableItemId = target.consumableItemId,
@@ -107,7 +116,7 @@ class ReminderWorker(
         targets.forEach { target ->
             val withAsset = pending.first { it.record.id == target.consumableItemId }
             val daysLeft = ChronoUnit.DAYS.between(today, target.nextDueDate)
-            val contentText = if (daysLeft <= 0) "오늘 예정된 일이에요" else "${daysLeft}일 후 예정된 일이에요"
+            val contentText = dueText(daysLeft, today = "오늘 예정된 일이에요", overdue = "예정일이 %d일 지났어요", ahead = "%d일 후 예정된 일이에요")
             val posted = showOneTimeTaskReminderNotification(
                 context = applicationContext,
                 repairRecordId = withAsset.record.id,
