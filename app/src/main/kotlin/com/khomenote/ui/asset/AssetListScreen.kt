@@ -1,5 +1,6 @@
 package com.khomenote.ui.asset
 
+import com.khomenote.ui.common.dragContainer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -228,7 +229,7 @@ fun AssetListScreen(
                 )
             }
             Box(modifier = Modifier.weight(1f)) {
-                LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp).dragContainer(dragState)) {
                     itemsIndexed(visibleAssets, key = { _, asset -> asset.asset.id }) { index, asset ->
                         val summary = summaries[asset.asset.id] ?: AssetCardSummary.EMPTY
                         // 카드 사이 간격은 Arrangement.spacedBy 대신 항목 안쪽 패딩으로 둔다 — 드래그 재정렬이

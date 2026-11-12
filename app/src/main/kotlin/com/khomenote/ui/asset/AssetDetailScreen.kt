@@ -1,5 +1,6 @@
 package com.khomenote.ui.asset
 
+import com.khomenote.ui.common.dragContainer
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -210,6 +211,7 @@ fun AssetDetailScreen(
     val today = remember { LocalDate.now() }
 
     var displayItems by remember { mutableStateOf(uiState.items) }
+    val pageScrollState = rememberScrollState()
     val listState = rememberLazyListState()
     val dragState = rememberDragDropListState(
         listState = listState,
@@ -218,6 +220,7 @@ fun AssetDetailScreen(
             displayItems = displayItems.toMutableList().apply { add(to, removeAt(from)) }
         },
         onReorderFinished = { viewModel.reorderItems(displayItems.map { it.item }) },
+        outerScroll = pageScrollState,
     )
     LaunchedEffect(uiState.items) {
         if (dragState.draggingItemIndex == null) displayItems = uiState.items
@@ -367,7 +370,7 @@ fun AssetDetailScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()),
+            modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(pageScrollState),
         ) {
             if (asset != null) {
                 Row(
@@ -415,7 +418,7 @@ fun AssetDetailScreen(
                             .background(SurfaceWhite)
                             .border(1.dp, CardBorder, cardShape),
                     ) {
-                        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().dragContainer(dragState)) {
                             itemsIndexed(displayItems, key = { _, status -> status.item.id }) { index, status ->
                                 RecurringRow(
                                     status = status,

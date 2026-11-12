@@ -1,5 +1,6 @@
 package com.khomenote.ui.settings
 
+import com.khomenote.ui.common.dragContainer
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.net.Uri
@@ -146,6 +147,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     var blockedDeleteCategory by remember { mutableStateOf<CategoryEntity?>(null) }
 
     var displayRows by remember { mutableStateOf(rows) }
+    val pageScrollState = rememberScrollState()
     val categoryListState = rememberLazyListState()
     val dragState = rememberDragDropListState(
         listState = categoryListState,
@@ -154,6 +156,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             displayRows = displayRows.toMutableList().apply { add(to, removeAt(from)) }
         },
         onReorderFinished = { viewModel.reorder(displayRows.map { it.category }) },
+        outerScroll = pageScrollState,
     )
     LaunchedEffect(rows) {
         if (dragState.draggingItemIndex == null) displayRows = rows
@@ -275,7 +278,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(pageScrollState)
                 .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -290,7 +293,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 ) {
                     if (displayRows.isNotEmpty()) {
                         Box(modifier = Modifier.fillMaxWidth().height(CATEGORY_ROW_HEIGHT * minOf(displayRows.size, VISIBLE_CATEGORY_ROWS))) {
-                            LazyColumn(state = categoryListState, modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(state = categoryListState, modifier = Modifier.fillMaxSize().dragContainer(dragState)) {
                                 itemsIndexed(displayRows, key = { _, row -> row.category.id }) { index, row ->
                                     Row(
                                         modifier = Modifier
